@@ -1,0 +1,2 @@
+# Displays all the models to be used by the game
+../models/ship.obj
