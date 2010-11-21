@@ -3,11 +3,16 @@
 
 #include "ModelLoader.h"
 
-float translation_value = 0.0;
+float translation_value;
 
-float red = 0.5,
-	  blue = 0.5,
-	  green = 0.5;
+ModelLoader ship;
+
+GLuint ship_list;
+
+void load_models() {
+	string ship_model = "../models/ship.obj";
+	ship.LoadModel(ship_model);
+}
 
 void init() {
 	int window_width = 800, window_height = 600;
@@ -18,17 +23,23 @@ void init() {
 		exit( EXIT_FAILURE );
 	}
 
-	// Open an OpenGL window
+	// Open an OpenGL window in Full Screen mode
 	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
 		glfwTerminate();
 		exit( EXIT_FAILURE );
 	}
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING); 
+    glEnable (GL_LIGHT0); 
+    glShadeModel (GL_SMOOTH); 
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+	ship_list = glGenLists(1);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45.0, aspect_ratio, 1.0, 50.0);
+	gluPerspective(105.0, aspect_ratio, 1.0, 50.0);
 
 	glMatrixMode(GL_MODELVIEW);
 }
@@ -41,48 +52,130 @@ void exit() {
 	exit( EXIT_SUCCESS );
 }
 
-void draw_model(float red, float blue, float green) {
-	glBegin(GL_QUADS);
-		glColor3f(red, blue, green);
-		glVertex3f(0.5, 0.5, 0);   //A
-		glVertex3f(0.5, -0.5, 0);  //B
-		glVertex3f(-0.5, -0.5, 0); //C
-		glVertex3f(-0.5, 0.5, 0);  //D
-		glColor3f(red*0.2, blue*0.2, green*0.2);
-		glVertex3f(0.5, 0.5, 0);     //A
-		glVertex3f(0.5, 0.5, -1.0);  //F
-		glVertex3f(0.5, -0.5, -1.0); //G
-		glVertex3f(0.5, -0.5, 0);    //B
-		glColor3f(red*0.4, blue*0.4, green*0.4);
-		glVertex3f(-0.5, 0.5, -1.0);  //E
-		glVertex3f(0.5, 0.5, -1.0);   //F
-		glVertex3f(0.5, -0.5, -1.0);  //G
-		glVertex3f(-0.5, -0.5, -1.0); //H
-		glColor3f(red*0.6, blue*0.6, green*0.6);
-		glVertex3f(-0.5, 0.5, 0);     //D
-		glVertex3f(-0.5, 0.5, -1.0);  //E
-		glVertex3f(-0.5, -0.5, -1.0); //H
-		glVertex3f(-0.5, -0.5, 0);    //C
-		glColor3f(red*0.8, blue*0.8, green*0.8);
-		glVertex3f(-0.5, -0.5, -1.0); //H
-		glVertex3f(0.5, -0.5, -1.0);  //G
-		glVertex3f(0.5, -0.5, 0);     //B
-		glVertex3f(-0.5, -0.5, 0);    //C
-		glColor3f(red*0.95, blue*0.95, green*0.95);
-		glVertex3f(-0.5, 0.5, -1.0);  //E
-		glVertex3f(0.5, 0.5, -1.0);   //F
-		glVertex3f(0.5, 0.5, 0);      //A		
-		glVertex3f(-0.5, 0.5, 0);     //D
-	glEnd();
+GLfloat** generate_vector(int rows, int cols) {
+  GLfloat** my_vector = new GLfloat* [rows];
+  for (int j = 0; j < rows; j ++)
+     my_vector[j] = new GLfloat[cols];
+
+  return my_vector;
 }
 
-void draw_wall() {
+// Deletes an array pointed by 'p' that has 'row' number rows
+void delete_vector(GLfloat** my_vector, int row) {
+  for (int j = 0; j < row; j ++)
+     delete [] my_vector[j];
+
+  delete [] my_vector;
+}
+
+void print_vector(GLfloat** my_vector, int rows, int cols) {
+	for(int i = 0; i < rows; i++) {
+		for(int j = 0; j < cols; j++) {
+			cout << my_vector[i][j] << "\t";
+		}
+		cout << "\n";
+	}
+	cout << "\n";
+}
+
+void draw_model(ModelLoader& model, GLuint& model_list) {
+	if(model_list != 0) {
+		string current_material;
+		GLfloat** vertex_vector = generate_vector(3, 3);
+		GLfloat** normals_vector = generate_vector(3, 3);
+		GLfloat** texture_vector = generate_vector(3, 2);
+
+		glNewList(model_list, GL_COMPILE);
+			for(int i = 0; i < model.current_model.faces->size(); i++) {
+				//load textures
+				for(int m = 0; m < model.current_model.materials->size(); m++) {
+
+				}
+				
+
+				//load materials
+				//if the current material is the same as in previous iteration do not relaoad the material values
+				if(current_material.compare(model.current_model.faces->at(i).texture_material) != 0) {
+					current_material = model.current_model.faces->at(i).texture_material;
+					if(current_material.compare("(null)") != 0) {
+						int material_index = 0;
+						while(current_material.compare(model.current_model.materials->at(material_index).newmtl) != 0)
+							material_index++;
+
+						glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, model.current_model.materials->at(material_index).Ns);
+						glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &model.current_model.materials->at(material_index).Ka);
+						glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &model.current_model.materials->at(material_index).Kd);
+						glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &model.current_model.materials->at(material_index).Ks);
+					}
+				}
+				
+				//load vectors
+				int j = 0, vertex_index = 0, normals_index = 0, texture_index = 0, index = 0;
+				while(j < model.current_model.faces->at(i).face.size()) {
+					if(j%3 == 0) {
+						index = model.current_model.faces->at(i).face.at(j) - 1;
+						
+						vertex_vector[vertex_index][0] = model.current_model.vertices->at(index).x;
+						vertex_vector[vertex_index][1] = model.current_model.vertices->at(index).y;
+						vertex_vector[vertex_index][2] = model.current_model.vertices->at(index).z;
+
+						vertex_index++;
+					} else if(j%3 == 1) {
+						index = model.current_model.faces->at(i).face.at(j) - 1;
+
+						texture_vector[texture_index][0] = model.current_model.texture_vertices->at(index).u;
+						texture_vector[texture_index][1] = model.current_model.texture_vertices->at(index).v;	
+
+						texture_index++;
+					} else if(j%3 == 2) {
+						index = model.current_model.faces->at(i).face.at(j) - 1;
+
+						normals_vector[normals_index][0] = model.current_model.normal_vertices->at(index).x;
+						normals_vector[normals_index][1] = model.current_model.normal_vertices->at(index).y;
+						normals_vector[normals_index][2] = model.current_model.normal_vertices->at(index).z;
+
+						normals_index++;
+					}
+					j++;
+				}
+
+				//draw the triangle
+				glBegin(GL_TRIANGLES);
+					//first point
+					glTexCoord2fv(texture_vector[0]);
+					glNormal3fv(normals_vector[0]);
+					glVertex3fv(vertex_vector[0]);
+					//second point
+					glTexCoord2fv(texture_vector[1]);
+					glNormal3fv(normals_vector[1]);
+					glVertex3fv(vertex_vector[1]);
+					//third point
+					glTexCoord2fv(texture_vector[2]);
+					glNormal3fv(normals_vector[2]);
+					glVertex3fv(vertex_vector[2]);
+				glEnd();
+			}
+		glEndList();
+
+		delete_vector(vertex_vector, 3);
+		delete_vector(normals_vector, 3);
+		delete_vector(texture_vector, 3);
+	} else {
+		glCallList(model_list);
+	}
+}
+
+void draw_world() {
+	//draw sky
+	//draw sun
+	//draw water
+	//draw islands
 	glBegin(GL_QUADS);
-		glColor3f(1.0, 1.0, 1.0);
-		glVertex3f(2.5, 2.5, -10);   //A
-		glVertex3f(2.5, -2.5, -10);  //B
-		glVertex3f(-2.5, -2.5, -10); //C
-		glVertex3f(-2.5, 2.5, -10);  //D
+		glColor3f(0.53, 0.81, 0.92);
+		glVertex3f(5.0, 5.0, -40);   //A
+		glVertex3f(5.0, -5.0, -40);  //B
+		glVertex3f(-5.0, -5.0, -40); //C
+		glVertex3f(-5.0, 5.0, -40);  //D
 	glEnd();
 }
 
@@ -100,10 +193,10 @@ void render() {
 
 	glPushMatrix();
 	
-	draw_model(red, blue, green);
+	draw_model(ship, ship_list);
 
 	glTranslatef(0.0, 0.0, translation_value);
-	draw_wall();
+	draw_world();
 
 	glPopMatrix();
 }
@@ -111,12 +204,14 @@ void render() {
 int main() {
 	int running = GL_TRUE;
 
-	ModelLoader test;
-	string current_model = "../models/ship.obj";
-	test.LoadModel(current_model);
-
 	//initialize the openGL window
 	init();
+
+	//write loading... on the screen
+
+
+	//load models
+	load_models();
 
 	// Main loop
 	while( running ) {
