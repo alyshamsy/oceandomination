@@ -20,7 +20,7 @@ public:
 	Face(const Face& source);
 	~Face();
 
-	vector<vector<int>> face;
+	vector<int> face;
 	string texture_material;
 };
 #endif

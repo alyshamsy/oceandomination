@@ -183,7 +183,6 @@ int ModelLoader::ParseFile(string& file_name) {
 
 	size_t position;
 	int f;
-	vector<int> temp;
 	while(!read_model_file.eof()) {
 		if(current_definition.compare("usemtl") == 0)
 			read_model_file >> current_face.texture_material;
@@ -202,6 +201,8 @@ int ModelLoader::ParseFile(string& file_name) {
 				position = current_face_values.find(' ', position+1);
 			}
 
+			array_size*=3;
+
 			position = 0;
 			while(current_face_values.find('/', position) != string::npos) {
 				current_face_values.replace(position, 1, " ");
@@ -211,12 +212,8 @@ int ModelLoader::ParseFile(string& file_name) {
 			face_values << current_face_values;
 
 			for(int i = 0; i < array_size; i++) {
-				for(int j = 0; j < 3; j++) {
-					face_values >> f;
-					temp.push_back(f);
-				}
-				current_face.face.push_back(temp);
-				temp.clear();
+				face_values >> f;
+				current_face.face.push_back(f);
 			}
 			current_model.faces->push_back(current_face);
 			current_face.face.clear();
