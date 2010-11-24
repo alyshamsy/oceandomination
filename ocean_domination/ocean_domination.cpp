@@ -1,66 +1,30 @@
 #include <GL/glfw.h>
+#include <FTGL/ftgl.h>
 #include <stdlib.h>
-
+#include <fstream>
 #include "ModelLoader.h"
+#include "TextureLoader.h"
 
 float translation_value;
 
 ModelLoader ship;
+TextureLoader textures;
 
 GLuint ship_list;
+GLuint* texture_images;
 
-void load_models() {
-	string ship_model = "../models/ship.obj";
-	ship.LoadModel(ship_model);
-}
+string* texture_file_names;
 
-void init() {
-	int window_width = 800, window_height = 600;
-	float aspect_ratio = (float)window_width/window_height;
-
-	// Initialise GLFW
-	if( !glfwInit() ) {
-		exit( EXIT_FAILURE );
-	}
-
-	// Open an OpenGL window in Full Screen mode
-	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
-		glfwTerminate();
-		exit( EXIT_FAILURE );
-	}
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING); 
-    glEnable (GL_LIGHT0); 
-    glShadeModel (GL_SMOOTH); 
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
-	ship_list = glGenLists(1);
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(105.0, aspect_ratio, 1.0, 50.0);
-
-	glMatrixMode(GL_MODELVIEW);
-}
-
-void exit() {
-	// Close window and terminate GLFW
-	glfwTerminate();
-
-	// Exit program
-	exit( EXIT_SUCCESS );
-}
-
+//generates a 2D array with the number of rows and columns
 GLfloat** generate_vector(int rows, int cols) {
   GLfloat** my_vector = new GLfloat* [rows];
   for (int j = 0; j < rows; j ++)
      my_vector[j] = new GLfloat[cols];
-
+  
   return my_vector;
 }
 
-// Deletes an array pointed by 'p' that has 'row' number rows
+// Deletes a 2D array pointed by 'my_vector' that has 'row' number rows
 void delete_vector(GLfloat** my_vector, int row) {
   for (int j = 0; j < row; j ++)
      delete [] my_vector[j];
@@ -68,6 +32,7 @@ void delete_vector(GLfloat** my_vector, int row) {
   delete [] my_vector;
 }
 
+//prints a 2D array pointed by 'my_vector'
 void print_vector(GLfloat** my_vector, int rows, int cols) {
 	for(int i = 0; i < rows; i++) {
 		for(int j = 0; j < cols; j++) {
@@ -78,22 +43,53 @@ void print_vector(GLfloat** my_vector, int rows, int cols) {
 	cout << "\n";
 }
 
-void draw_model(ModelLoader& model, GLuint& model_list) {
-	if(model_list != 0) {
+//handle to read models.txt and load models in parallel
+int load_models() {
+	string ship_model = "../models/ship.obj";
+	ship.LoadModel(ship_model);
+
+	return 0;
+}
+
+//read the texture file and load all the textures
+int load_textures(string& texture_file) {
+	int number_of_textures;
+	string texture_file_name;
+	texture_file_names = new string[number_of_textures];
+	fstream texture_loader;
+
+	texture_loader.open(texture_file, ios::in);
+
+	if(!texture_loader) {
+		return 1;
+	}
+
+	texture_loader.ignore(1024, '\n');
+	texture_loader >> number_of_textures;
+
+	for(int i = 0; i < number_of_textures; i++) {
+		texture_loader >> texture_file_name;
+		texture_file_names[i] = texture_file_name;
+	}
+
+	textures.LoadTextures(texture_file_names, number_of_textures, texture_images);
+
+	return 0;
+}
+
+//generate the call list from the model and the call list value
+int generate_call_list(ModelLoader& model, GLuint model_call_list) {
+	if(model_call_list != 0) {
 		string current_material;
+		string current_texture;
+
 		GLfloat** vertex_vector = generate_vector(3, 3);
 		GLfloat** normals_vector = generate_vector(3, 3);
 		GLfloat** texture_vector = generate_vector(3, 2);
 
-		glNewList(model_list, GL_COMPILE);
+		glNewList(model_call_list, GL_COMPILE);
 			for(int i = 0; i < model.current_model.faces->size(); i++) {
-				//load textures
-				for(int m = 0; m < model.current_model.materials->size(); m++) {
-
-				}
-				
-
-				//load materials
+				//load materials and bind textures
 				//if the current material is the same as in previous iteration do not relaoad the material values
 				if(current_material.compare(model.current_model.faces->at(i).texture_material) != 0) {
 					current_material = model.current_model.faces->at(i).texture_material;
@@ -102,10 +98,19 @@ void draw_model(ModelLoader& model, GLuint& model_list) {
 						while(current_material.compare(model.current_model.materials->at(material_index).newmtl) != 0)
 							material_index++;
 
+						//assign material values
 						glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, model.current_model.materials->at(material_index).Ns);
 						glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &model.current_model.materials->at(material_index).Ka);
 						glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &model.current_model.materials->at(material_index).Kd);
 						glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &model.current_model.materials->at(material_index).Ks);
+
+						//bind texture
+						current_texture = model.current_model.materials->at(material_index).map_Kd;
+						int texture_index = 0;
+						while(current_texture.compare(texture_file_names[texture_index]) != 0)
+							texture_index++;
+
+						glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
 					}
 				}
 				
@@ -160,9 +165,76 @@ void draw_model(ModelLoader& model, GLuint& model_list) {
 		delete_vector(vertex_vector, 3);
 		delete_vector(normals_vector, 3);
 		delete_vector(texture_vector, 3);
-	} else {
-		glCallList(model_list);
 	}
+
+	return 0;
+}
+
+void load_text(string text, string font_type, FTPoint& position) {
+	FTGLPixmapFont font(font_type.c_str());
+	font.FaceSize(72);
+	font.Render(text.c_str(), -1, position);
+}
+
+void init() {
+	int window_width = 800, window_height = 600;
+	float aspect_ratio = (float)window_width/window_height;
+
+	// Initialise GLFW
+	if( !glfwInit() ) {
+		exit( EXIT_FAILURE );
+	}
+	
+	// Open an OpenGL window in Full Screen mode
+	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
+		glfwTerminate();
+		exit( EXIT_FAILURE );
+	}
+
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING); 
+    glEnable (GL_LIGHT0); 
+    glShadeModel (GL_SMOOTH); 
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+	//set up the camera and the viewport
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(105.0, aspect_ratio, 1.0, 50.0);
+
+	glMatrixMode(GL_MODELVIEW);
+
+	//write loading... on the screen
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	FTPoint text_position(250.0, 300.0);
+	load_text("Loading...", "../fonts/CAMBRIA.ttf", text_position);
+	glfwSwapBuffers();
+
+	//load all models
+	load_models();
+
+	//load all textures
+	string texture_file_name = "textures.txt";
+	load_textures(texture_file_name);
+
+	//create the call lists
+	ship_list = glGenLists(1);
+
+	//generate all the call lists
+	generate_call_list(ship, ship_list);
+}
+
+void exit() {
+	// Close window and terminate GLFW
+	glfwTerminate();
+
+	// Exit program
+	exit( EXIT_SUCCESS );
+}
+
+void draw_model(GLuint& model_list) {
+	glCallList(model_list);
 }
 
 void draw_world() {
@@ -193,7 +265,7 @@ void render() {
 
 	glPushMatrix();
 	
-	draw_model(ship, ship_list);
+	draw_model(ship_list);
 
 	glTranslatef(0.0, 0.0, translation_value);
 	draw_world();
@@ -206,12 +278,6 @@ int main() {
 
 	//initialize the openGL window
 	init();
-
-	//write loading... on the screen
-
-
-	//load models
-	load_models();
 
 	// Main loop
 	while( running ) {
