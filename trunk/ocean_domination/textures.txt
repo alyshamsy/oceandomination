@@ -1,1 +1,16 @@
 # Displays all the images to be used by the game
+14
+red.tga
+dark-gray.tga
+concrete.tga
+British.tga
+concrete.tga
+black.tga
+dark-metal.tga
+diamond-black.tga
+brushed-metal.tga
+enemy.tga
+sky.tga
+sun.tga
+blue.tga
+water.tga

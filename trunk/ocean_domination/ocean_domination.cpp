@@ -4,13 +4,25 @@
 #include <fstream>
 #include "ModelLoader.h"
 #include "TextureLoader.h"
+#include <iostream>
+#include <math.h>
+
+using namespace std;
 
 float translation_value;
 
 ModelLoader ship;
+ModelLoader sky;
+ModelLoader sun;
+ModelLoader water;
+
 TextureLoader textures;
 
 GLuint ship_list;
+GLuint sky_list;
+GLuint sun_list;
+GLuint water_list;
+
 GLuint* texture_images;
 
 string* texture_file_names;
@@ -46,16 +58,22 @@ void print_vector(GLfloat** my_vector, int rows, int cols) {
 //handle to read models.txt and load models in parallel
 int load_models() {
 	string ship_model = "../models/ship.obj";
+	string sky_model = "../models/sky.obj";
+	string sun_model = "../models/sun.obj";
+	string water_model = "../models/water.obj";
+
 	ship.LoadModel(ship_model);
+	sky.LoadModel(sky_model);
+	sun.LoadModel(sun_model);
+	water.LoadModel(water_model);
 
 	return 0;
 }
 
 //read the texture file and load all the textures
 int load_textures(string& texture_file) {
-	int number_of_textures;
+	int number_of_textures = 0;
 	string texture_file_name;
-	texture_file_names = new string[number_of_textures];
 	fstream texture_loader;
 
 	texture_loader.open(texture_file, ios::in);
@@ -66,6 +84,9 @@ int load_textures(string& texture_file) {
 
 	texture_loader.ignore(1024, '\n');
 	texture_loader >> number_of_textures;
+
+	texture_file_names = new string[number_of_textures];
+	texture_images = new GLuint[number_of_textures];
 
 	for(int i = 0; i < number_of_textures; i++) {
 		texture_loader >> texture_file_name;
@@ -107,8 +128,9 @@ int generate_call_list(ModelLoader& model, GLuint model_call_list) {
 						//bind texture
 						current_texture = model.current_model.materials->at(material_index).map_Kd;
 						int texture_index = 0;
-						while(current_texture.compare(texture_file_names[texture_index]) != 0)
+						while(current_texture.compare(texture_file_names[texture_index]) != 0) {
 							texture_index++;
+						}
 
 						glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
 					}
@@ -177,7 +199,7 @@ void load_text(string text, string font_type, FTPoint& position) {
 }
 
 void init() {
-	int window_width = 800, window_height = 600;
+	int window_width = 1280, window_height = 720;
 	float aspect_ratio = (float)window_width/window_height;
 
 	// Initialise GLFW
@@ -186,22 +208,24 @@ void init() {
 	}
 	
 	// Open an OpenGL window in Full Screen mode
-	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
+	if( !glfwOpenWindow( window_width, window_height, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, GLFW_WINDOW ) ) {
 		glfwTerminate();
 		exit( EXIT_FAILURE );
 	}
 
+	glfwSetWindowTitle("Ocean Domination");
+
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING); 
-    glEnable (GL_LIGHT0); 
-    glShadeModel (GL_SMOOTH); 
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	//glEnable(GL_LIGHTING); 
+    //glEnable (GL_LIGHT0); 
+    //glShadeModel (GL_SMOOTH); 
+	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 	//set up the camera and the viewport
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(105.0, aspect_ratio, 1.0, 50.0);
+	gluPerspective(105.0, aspect_ratio, 1.0, 1000.0);
 
 	glMatrixMode(GL_MODELVIEW);
 
@@ -220,9 +244,15 @@ void init() {
 
 	//create the call lists
 	ship_list = glGenLists(1);
+	sky_list = glGenLists(1);
+	sun_list = glGenLists(1);
+	water_list = glGenLists(1);
 
 	//generate all the call lists
 	generate_call_list(ship, ship_list);
+	generate_call_list(sky, sky_list);
+	generate_call_list(sun, sun_list);
+	generate_call_list(water, water_list);
 }
 
 void exit() {
@@ -239,16 +269,30 @@ void draw_model(GLuint& model_list) {
 
 void draw_world() {
 	//draw sky
+	glPushMatrix();
+	{	
+		glTranslatef(0, -2, 0);
+		draw_model(sky_list);
+	}
+	glPopMatrix();
 	//draw sun
+	glPushMatrix();
+	{
+		glScalef(10, 10, 10);
+		glTranslatef(10, 20, -35);
+		glRotatef(atan(20.0/35), 1.0, 0.0, 0.0);
+		draw_model(sun_list);
+	}
+	glPopMatrix();
 	//draw water
+	glPushMatrix();
+	{	
+		glTranslatef(0, -2, 0);
+		draw_model(water_list);
+	}
+	glPopMatrix();
 	//draw islands
-	glBegin(GL_QUADS);
-		glColor3f(0.53, 0.81, 0.92);
-		glVertex3f(5.0, 5.0, -40);   //A
-		glVertex3f(5.0, -5.0, -40);  //B
-		glVertex3f(-5.0, -5.0, -40); //C
-		glVertex3f(-5.0, 5.0, -40);  //D
-	glEnd();
+	
 }
 
 void render() {
@@ -263,13 +307,21 @@ void render() {
 		translation_value -= 0.2f;
 	}
 
-	glPushMatrix();
 	
-	draw_model(ship_list);
-
-	glTranslatef(0.0, 0.0, translation_value);
-	draw_world();
-
+	glPushMatrix();
+	{
+		glScalef(0.15, 0.15, 0.15);
+		glTranslatef(0.0, -4.0, 0.0);
+		glRotatef(15, 1.0, 0.0, 0.0);
+		draw_model(ship_list);
+	}
+	glPopMatrix();
+	
+	glPushMatrix();
+	{
+		glTranslatef(0.0, 0.0, translation_value);
+		draw_world();
+	}
 	glPopMatrix();
 }
 
