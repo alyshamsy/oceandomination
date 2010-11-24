@@ -6,7 +6,7 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
-map_Kd red.tga
+map_Kd blue.tga
 
 
 newmtl None_dark-gray.jpg
@@ -36,7 +36,7 @@ Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
 illum 2
-map_Kd British.tga
+map_Kd enemy.tga
 
 
 newmtl None_concrete-floor.jpg
