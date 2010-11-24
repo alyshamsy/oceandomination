@@ -183,12 +183,19 @@ int ModelLoader::ParseFile(string& file_name) {
 
 	size_t position;
 	int f;
+	string smooth_value;
 	while(!read_model_file.eof()) {
 		if(current_definition.compare("usemtl") == 0)
 			read_model_file >> current_face.texture_material;
 
-		if(current_definition.compare("s") == 0)
-			read_model_file >> current_model.smooth_shading;
+		if(current_definition.compare("s") == 0) {
+			read_model_file >> smooth_value;
+			if(smooth_value.compare("off") == 0) {
+				current_model.smooth_shading = 0;
+			} else {
+				current_model.smooth_shading = atof(smooth_value.c_str());
+			}
+		}
 
 		read_model_file >> current_definition;
 		while(current_definition.compare("f") == 0 && !read_model_file.eof()) {

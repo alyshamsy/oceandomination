@@ -29,7 +29,7 @@ public:
 		vector<Vertex>* normal_vertices;
 		vector<Face>* faces;
 		vector<MtlHandler>* materials;
-		string smooth_shading;
+		int smooth_shading;
 	} current_model;
 
 private:
