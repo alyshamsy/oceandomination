@@ -1,3 +1,4 @@
+#include "ShaderLoader.h"
 #include <GL/glfw.h>
 #include <FTGL/ftgl.h>
 #include <stdlib.h>
@@ -218,7 +219,7 @@ void init() {
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_LIGHTING); 
-    //glEnable (GL_LIGHT0); 
+    //glEnable(GL_LIGHT0); 
     //glShadeModel (GL_SMOOTH); 
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
@@ -275,15 +276,17 @@ void draw_world() {
 		draw_model(sky_list);
 	}
 	glPopMatrix();
+	
 	//draw sun
 	glPushMatrix();
 	{
-		glScalef(10, 10, 10);
-		glTranslatef(10, 20, -35);
-		glRotatef(atan(20.0/35), 1.0, 0.0, 0.0);
+		glScalef(15, 15, 10);
+		glTranslatef(10, 12, -20);
+		glRotatef(atan(12.0/20), 1.0, 0.0, 0.0);
 		draw_model(sun_list);
 	}
 	glPopMatrix();
+	
 	//draw water
 	glPushMatrix();
 	{	
@@ -291,6 +294,7 @@ void draw_world() {
 		draw_model(water_list);
 	}
 	glPopMatrix();
+	
 	//draw islands
 	
 }
