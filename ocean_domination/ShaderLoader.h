@@ -11,14 +11,14 @@ public:
 	ShaderLoader();
 	~ShaderLoader();
 
-	int LoadShader(string& file_name);
-	int DetachShader();
+	int LoadShader();
+	void DetachShader();
+
+	GLuint program_object, v_shader, f_shader;
 
 private:
-	char* ReadShaderFile(string& shader_file_name);
-	
-	char* vertex_shader;
-	char* fragment_shader;
+	char* ReadShaderFile(char* shader_file_name);
+	void PrintInfoLog(int object);
 };
 
 #endif
