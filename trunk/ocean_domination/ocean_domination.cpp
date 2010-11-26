@@ -287,11 +287,16 @@ void draw_world() {
 	glPopMatrix();
 	
 	//draw sun
+	GLfloat sun_starting_x = 10.0;
+	GLfloat sun_starting_y = 12.0;
+	GLfloat sun_starting_z = -20.0;
+	GLfloat starting_angle = atan(sun_starting_y/(-sun_starting_z));
 	glPushMatrix();
 	{
 		glScalef(15, 15, 10);
-		glTranslatef(10, 12, -20);
-		glRotatef(atan(12.0/20), 1.0, 0.0, 0.0);
+		glTranslatef(sun_starting_x, sun_starting_y, sun_starting_z);
+		glRotatef(starting_angle, 1.0, 0.0, 0.0);
+		glRotatef(rotation_value, 0.0, 1.0, 0.0);
 		draw_model(sun_list);
 	}
 	glPopMatrix();
@@ -309,20 +314,15 @@ void draw_world() {
 }
 
 void render() {
+	GLfloat scene_rotation;
+	GLfloat side_movement;
+	GLfloat forward_movement;
+
 	glLoadIdentity();
 	glTranslatef(0.0, 0.0, -3.0);
 
 	//if the up key is pressed, move in the positive x and z direction
 	if(glfwGetKey(GLFW_KEY_UP) == GLFW_PRESS) {
-		viewing_value = 0.0;
-		x_position += (float)sin(rotation_value*pi_conversion) * 0.1f;
-		z_position += (float)cos(rotation_value*pi_conversion) * 0.1f;
-
-		//handle camera movement based on wave movement
-	}
-
-	//if the down key is pressed, move in the negative x and z direction
-	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
 		viewing_value = 0.0;
 		x_position -= (float)sin(rotation_value*pi_conversion) * 0.1f;
 		z_position -= (float)cos(rotation_value*pi_conversion) * 0.1f;
@@ -330,20 +330,34 @@ void render() {
 		//handle camera movement based on wave movement
 	}
 
+	//if the down key is pressed, move in the negative x and z direction
+	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
+		viewing_value = 0.0;
+		x_position += (float)sin(rotation_value*pi_conversion) * 0.1f;
+		z_position += (float)cos(rotation_value*pi_conversion) * 0.1f;
+
+		//handle camera movement based on wave movement
+	}
+
 	//if the right key is pressed, rotate in the positive direction
 	if(glfwGetKey(GLFW_KEY_RIGHT) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		rotation_value += 0.1f;
+		rotation_value -= 0.3f;
 	}
 
 	//if the left key is pressed, rotate in the negative direction
 	if(glfwGetKey(GLFW_KEY_LEFT) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		rotation_value -=0.1f;
+		rotation_value +=0.3f;
 	}
 
 	//add functionality for rotating the view with the mouse movement
 	
+	//adjusting rotation and forward and backward movement
+	scene_rotation = 360.0 - rotation_value;
+	side_movement = -x_position;
+	forward_movement = -z_position;
+
 	glPushMatrix();
 	{
 		glScalef(0.15, 0.15, 0.15);
@@ -355,8 +369,8 @@ void render() {
 	
 	glPushMatrix();
 	{
-		glTranslatef(x_position, 0.0, z_position);
-		glRotatef(rotation_value, 0.0, 1.0, 0.0);
+		glTranslatef(side_movement, 0.0, forward_movement);
+		glRotatef(scene_rotation, 0.0, 1.0, 0.0);
 		draw_world();
 	}
 	glPopMatrix();
