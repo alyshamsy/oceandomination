@@ -14,52 +14,64 @@ ShaderLoader::~ShaderLoader() {
 
 }
 
-int ShaderLoader::LoadShader() {
+int ShaderLoader::LoadShader(string& vertex_shader_file, string& fragment_shader_file, GLint current_program) {
 	GLint status = 0;
 
-	char* vertex_shader_source = NULL;
-	char* fragment_shader_source = NULL;
+	program_object = current_program;
 
-	vertex_shader_source = ReadShaderFile("test.vert");
-	if(vertex_shader_source == NULL) {
-		cout << "Failed to read the vertex shader" << endl;
-		status = 1;
-		return status;
+	if(vertex_shader_file.empty() == false) {
+		char* vertex_shader_source = NULL;
+
+		vertex_shader_source = ReadShaderFile(vertex_shader_file);
+		if(vertex_shader_source == NULL) {
+			cout << "Failed to read the vertex shader" << endl;
+			status = 1;
+			return status;
+		}
+
+		v_shader = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(v_shader, 1, (const GLchar**) &vertex_shader_source, NULL);
+
+		delete vertex_shader_source;
+
+		glCompileShader(v_shader);
+		glGetShaderiv(v_shader, GL_COMPILE_STATUS, &status);
+		if(status != GL_TRUE) {
+			cout << "Failed to compile the vertex shader" << endl;
+			PrintInfoLog(1);
+			return status;
+		}
+
+		glAttachShader(program_object, v_shader);
 	}
+	
+	if(fragment_shader_file.empty() == false) {
+		char* fragment_shader_source = NULL;
+	
+		fragment_shader_source = ReadShaderFile(fragment_shader_file);
+		if(fragment_shader_source == NULL) {
+			cout << "Failed to read the fragment shader" << endl;
+			status = 1;
+			return status;
+		}
+		
+		f_shader = glCreateShader(GL_FRAGMENT_SHADER);
+		
+		glShaderSource(f_shader, 1, (const GLchar**) &fragment_shader_source, NULL);
+		
+		delete fragment_shader_source;
+	
+		glCompileShader(f_shader);
+		glGetShaderiv(f_shader, GL_COMPILE_STATUS, &status);
+		if(status != GL_TRUE) {
+			cout << "Failed to compile the fragment shader" << endl;
+			PrintInfoLog(2);
+			return status;
+		}
 
-	fragment_shader_source = ReadShaderFile("test.frag");
-	if(fragment_shader_source == NULL) {
-		cout << "Failed to read the fragment shader" << endl;
-		status = 1;
-		return status;
+		glAttachShader(program_object, f_shader);
 	}
-
-	v_shader = glCreateShader(GL_VERTEX_SHADER);
-	f_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(v_shader, 1, (const GLchar**) &vertex_shader_source, NULL);
-	glShaderSource(f_shader, 1, (const GLchar**) &fragment_shader_source, NULL);
-
-	glCompileShader(v_shader);
-	glGetShaderiv(v_shader, GL_COMPILE_STATUS, &status);
-	if(status != GL_TRUE) {
-		cout << "Failed to compile the vertex shader" << endl;
-		PrintInfoLog(1);
-		return status;
-	}
-
-	glCompileShader(f_shader);
-	glGetShaderiv(f_shader, GL_COMPILE_STATUS, &status);
-	if(status != GL_TRUE) {
-		cout << "Failed to compile the fragment shader" << endl;
-		PrintInfoLog(2);
-		return status;
-	}
-
-	program_object = glCreateProgram();
-
-	glAttachShader(program_object, v_shader);
-	glAttachShader(program_object, f_shader);
+	
 
 	glLinkProgram(program_object);
 	glGetProgramiv(program_object, GL_LINK_STATUS, &status);
@@ -75,17 +87,17 @@ int ShaderLoader::LoadShader() {
 }
 
 void ShaderLoader::DetachShader() {
-	glAttachShader(program_object, NULL);
+	glUseProgram(0);
 }
 
 
-char* ShaderLoader::ReadShaderFile(char* shader_file_name) {
+char* ShaderLoader::ReadShaderFile(string& shader_file_name) {
 	char* shader_contents = NULL;
 	long size = 0;
 
 	FILE* shader_file;
 	
-	shader_file = fopen(shader_file_name, "rt");
+	shader_file = fopen(shader_file_name.c_str(), "rt");
 
 	if (shader_file != NULL) { 
 		fseek(shader_file, 0, SEEK_END);
