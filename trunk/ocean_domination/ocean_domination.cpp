@@ -1,4 +1,4 @@
-#include "ShaderLoader.h"
+//#include "ShaderLoader.h"
 #include <GL/glfw.h>
 #include <FTGL/ftgl.h>
 #include <stdlib.h>
@@ -8,9 +8,18 @@
 #include <iostream>
 #include <math.h>
 
+#define PI 3.14159265
+
 using namespace std;
 
-float translation_value;
+//movement in the world
+GLfloat x_position = 0.0,
+		z_position = 0.0,
+		rotation_value = 0.0,
+		viewing_value = 0.0,
+		camera_movement = 0.0;
+
+float pi_conversion = PI/180;
 
 ModelLoader ship;
 ModelLoader sky;
@@ -303,27 +312,51 @@ void render() {
 	glLoadIdentity();
 	glTranslatef(0.0, 0.0, -3.0);
 
+	//if the up key is pressed, move in the positive x and z direction
 	if(glfwGetKey(GLFW_KEY_UP) == GLFW_PRESS) {
-		translation_value += 0.2f;
+		viewing_value = 0.0;
+		x_position += (float)sin(rotation_value*pi_conversion) * 0.1f;
+		z_position += (float)cos(rotation_value*pi_conversion) * 0.1f;
+
+		//handle camera movement based on wave movement
 	}
 
+	//if the down key is pressed, move in the negative x and z direction
 	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
-		translation_value -= 0.2f;
+		viewing_value = 0.0;
+		x_position -= (float)sin(rotation_value*pi_conversion) * 0.1f;
+		z_position -= (float)cos(rotation_value*pi_conversion) * 0.1f;
+
+		//handle camera movement based on wave movement
 	}
 
+	//if the right key is pressed, rotate in the positive direction
+	if(glfwGetKey(GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		viewing_value = 0.0;
+		rotation_value += 0.1f;
+	}
+
+	//if the left key is pressed, rotate in the negative direction
+	if(glfwGetKey(GLFW_KEY_LEFT) == GLFW_PRESS) {
+		viewing_value = 0.0;
+		rotation_value -=0.1f;
+	}
+
+	//add functionality for rotating the view with the mouse movement
 	
 	glPushMatrix();
 	{
 		glScalef(0.15, 0.15, 0.15);
-		glTranslatef(0.0, -4.0, 0.0);
 		glRotatef(15, 1.0, 0.0, 0.0);
+		glTranslatef(0.0, -4.0, 0.0);
 		draw_model(ship_list);
 	}
 	glPopMatrix();
 	
 	glPushMatrix();
 	{
-		glTranslatef(0.0, 0.0, translation_value);
+		glTranslatef(x_position, 0.0, z_position);
+		glRotatef(rotation_value, 0.0, 1.0, 0.0);
 		draw_world();
 	}
 	glPopMatrix();
