@@ -32,6 +32,7 @@
   <ItemGroup>
     <None Include="textures.txt" />
     <None Include="models.txt" />
+    <None Include="water_shader.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}</ProjectGuid>

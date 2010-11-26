@@ -1,4 +1,4 @@
-//#include "ShaderLoader.h"
+#include "ShaderLoader.h"
 #include <GL/glfw.h>
 #include <FTGL/ftgl.h>
 #include <stdlib.h>
@@ -12,6 +12,17 @@
 
 using namespace std;
 
+//standard values
+float pi_conversion = PI/180;
+
+//world values
+float wind_factor = 30.0;
+string wind_direction = "north";
+float wind_x_frequency = 0.0;
+float wind_z_frequency = 0.0;
+
+GLfloat current_time;
+
 //movement in the world
 GLfloat x_position = 0.0,
 		z_position = 0.0,
@@ -19,22 +30,32 @@ GLfloat x_position = 0.0,
 		viewing_value = 0.0,
 		camera_movement = 0.0;
 
-float pi_conversion = PI/180;
 
+//Models to be loaded
 ModelLoader ship;
 ModelLoader sky;
 ModelLoader sun;
 ModelLoader water;
 
+//Shaders to be loaded
+ShaderLoader water_shader;
+
+//textures to be loaded
 TextureLoader textures;
 
+//lists to be generated
 GLuint ship_list;
 GLuint sky_list;
 GLuint sun_list;
 GLuint water_list;
 
+//programs to be used for the shader
+GLint water_shader_program;
+
+//list of texture images
 GLuint* texture_images;
 
+//list of texture file names
 string* texture_file_names;
 
 //generates a 2D array with the number of rows and columns
@@ -202,10 +223,40 @@ int generate_call_list(ModelLoader& model, GLuint model_call_list) {
 	return 0;
 }
 
+//displays the text on the screen
 void load_text(string text, string font_type, FTPoint& position) {
 	FTGLPixmapFont font(font_type.c_str());
 	font.FaceSize(72);
 	font.Render(text.c_str(), -1, position);
+}
+
+//determines the x and z frequencies of the wind based on direction
+void calculate_wind_frequencies() {
+	if(wind_direction.compare("north") == 0) {
+		wind_x_frequency = 0.0;
+		wind_z_frequency = wind_factor*10;
+	} else if(wind_direction.compare("north-east") == 0) {
+		wind_x_frequency = wind_factor*10;
+		wind_z_frequency = wind_factor*10;
+	} else if(wind_direction.compare("east") == 0) {
+		wind_x_frequency = wind_factor*10;
+		wind_z_frequency = 0.0;
+	} else if(wind_direction.compare("south-east") == 0) {
+		wind_x_frequency = wind_factor*10;
+		wind_z_frequency = -wind_factor*10;
+	} else if(wind_direction.compare("south") == 0) {
+		wind_x_frequency = 0.0;
+		wind_z_frequency = -wind_factor*10;
+	} else if(wind_direction.compare("south-west") == 0) {
+		wind_x_frequency = -wind_factor*10;
+		wind_z_frequency = -wind_factor*10;
+	} else if(wind_direction.compare("west") == 0) {
+		wind_x_frequency = -wind_factor*10;
+		wind_z_frequency = 0.0;
+	} else if(wind_direction.compare("north-west") == 0) {
+		wind_x_frequency = wind_factor*10;
+		wind_z_frequency = -wind_factor*10;
+	}
 }
 
 void init() {
@@ -225,6 +276,13 @@ void init() {
 
 	glfwSetWindowTitle("Ocean Domination");
 
+	//initialize glew
+	glewInit();
+	if (!glewIsSupported("GL_VERSION_2_0")) {
+		cout << "OpenGL 2.0 not supported" << endl;
+		exit(1);
+	}
+
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_LIGHTING); 
@@ -241,7 +299,9 @@ void init() {
 
 	//write loading... on the screen
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	FTPoint text_position(250.0, 300.0);
+	//add a texture image for the game
+	//add flashing for the loading sign
+	FTPoint text_position(window_width*0.36, window_height*0.25);
 	load_text("Loading...", "../fonts/CAMBRIA.ttf", text_position);
 	glfwSwapBuffers();
 
@@ -263,6 +323,9 @@ void init() {
 	generate_call_list(sky, sky_list);
 	generate_call_list(sun, sun_list);
 	generate_call_list(water, water_list);
+
+	//create shader programs
+	water_shader_program = glCreateProgram();
 }
 
 void exit() {
@@ -277,7 +340,7 @@ void draw_model(GLuint& model_list) {
 	glCallList(model_list);
 }
 
-void draw_world() {
+void draw_top_world() {
 	//draw sky
 	glPushMatrix();
 	{	
@@ -287,6 +350,7 @@ void draw_world() {
 	glPopMatrix();
 	
 	//draw sun
+	//billboard the sun
 	GLfloat sun_starting_x = 10.0;
 	GLfloat sun_starting_y = 12.0;
 	GLfloat sun_starting_z = -20.0;
@@ -300,7 +364,32 @@ void draw_world() {
 		draw_model(sun_list);
 	}
 	glPopMatrix();
-	
+}
+
+void draw_bottom_world() {
+	GLint location_time, location_wind, location_x_frequency, location_z_frequency;
+
+	current_time = glfwGetTime();
+	wind_direction = "east";
+	calculate_wind_frequencies();
+
+	string vertex_shader = "water_shader.vert";
+	string fragment_shader = "";
+
+	water_shader.LoadShader(vertex_shader, fragment_shader, water_shader_program);
+
+	location_time = glGetUniformLocation(water_shader_program, "time");
+	glUniform1f(location_time, current_time);
+
+	location_wind = glGetUniformLocation(water_shader_program, "wind_factor");
+	glUniform1f(location_wind, wind_factor);
+
+	location_x_frequency = glGetUniformLocation(water_shader_program, "x_frequency");
+	glUniform1f(location_x_frequency, wind_x_frequency);
+
+	location_z_frequency = glGetUniformLocation(water_shader_program, "z_frequency");
+	glUniform1f(location_z_frequency, wind_z_frequency);
+
 	//draw water
 	glPushMatrix();
 	{	
@@ -308,7 +397,8 @@ void draw_world() {
 		draw_model(water_list);
 	}
 	glPopMatrix();
-	
+	water_shader.DetachShader();
+
 	//draw islands
 	
 }
@@ -324,8 +414,8 @@ void render() {
 	//if the up key is pressed, move in the positive x and z direction
 	if(glfwGetKey(GLFW_KEY_UP) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		x_position -= (float)sin(rotation_value*pi_conversion) * 0.1f;
-		z_position -= (float)cos(rotation_value*pi_conversion) * 0.1f;
+		x_position -= (float)sin(rotation_value*pi_conversion) * 0.5f;
+		z_position -= (float)cos(rotation_value*pi_conversion) * 0.5f;
 
 		//handle camera movement based on wave movement
 	}
@@ -333,8 +423,8 @@ void render() {
 	//if the down key is pressed, move in the negative x and z direction
 	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		x_position += (float)sin(rotation_value*pi_conversion) * 0.1f;
-		z_position += (float)cos(rotation_value*pi_conversion) * 0.1f;
+		x_position += (float)sin(rotation_value*pi_conversion) * 0.5f;
+		z_position += (float)cos(rotation_value*pi_conversion) * 0.5f;
 
 		//handle camera movement based on wave movement
 	}
@@ -358,6 +448,7 @@ void render() {
 	side_movement = -x_position;
 	forward_movement = -z_position;
 
+	//draw the ship
 	glPushMatrix();
 	{
 		glScalef(0.15, 0.15, 0.15);
@@ -367,11 +458,13 @@ void render() {
 	}
 	glPopMatrix();
 	
+	//draw the world
 	glPushMatrix();
 	{
-		glTranslatef(side_movement, 0.0, forward_movement);
 		glRotatef(scene_rotation, 0.0, 1.0, 0.0);
-		draw_world();
+		draw_top_world();
+		glTranslatef(side_movement, 0.0, forward_movement);
+		draw_bottom_world();
 	}
 	glPopMatrix();
 }

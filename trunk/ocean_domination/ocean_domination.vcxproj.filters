@@ -70,5 +70,8 @@
     <None Include="textures.txt">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="water_shader.vert">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
