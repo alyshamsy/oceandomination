@@ -36,4 +36,3 @@ GLuint* TextureLoader::LoadTextures(string* textures, int number_of_textures, GL
 
 	return texture_image;
 }
-
