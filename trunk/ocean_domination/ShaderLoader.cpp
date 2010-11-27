@@ -82,11 +82,11 @@ int ShaderLoader::LoadShader(string& vertex_shader_file, string& fragment_shader
 	}
 
 	glUseProgram(program_object);
-
 	return status;
 }
 
-void ShaderLoader::DetachShader() {
+void ShaderLoader::DetachShader(GLint program) {
+	glDetachShader(program, v_shader);
 	glUseProgram(0);
 }
 
@@ -115,6 +115,7 @@ char* ShaderLoader::ReadShaderFile(string& shader_file_name) {
 }
 
 void ShaderLoader::PrintInfoLog(int object) {
+	_asm{ int 0x3 };
 	int log_length = 0;
 	int characters_written = 0;
 	char* log_info;

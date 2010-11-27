@@ -12,7 +12,7 @@ public:
 	~ShaderLoader();
 
 	int LoadShader(string& vertex_shader_file, string& fragment_shader_file, GLint current_program);
-	void DetachShader();
+	void DetachShader(GLint program);
 
 	GLuint program_object, v_shader, f_shader;
 

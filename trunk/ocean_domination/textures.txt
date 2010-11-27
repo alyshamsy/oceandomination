@@ -13,4 +13,4 @@ enemy.tga
 sky.tga
 sun.tga
 blue.tga
-water.tga
+blue_water.tga

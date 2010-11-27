@@ -9,18 +9,21 @@
 #include <math.h>
 
 #define PI 3.14159265
+#define mesh_size 1000
 
 using namespace std;
 
 //standard values
 float pi_conversion = PI/180;
 
-//world values
-float wind_factor = 30.0;
+//wind values in the world
+float wind_factor = 0.5;
 string wind_direction = "north";
 float wind_x_frequency = 0.0;
 float wind_z_frequency = 0.0;
 
+//stores the current time elapsed since the start of the game
+GLfloat start_time;
 GLfloat current_time;
 
 //movement in the world
@@ -32,10 +35,11 @@ GLfloat x_position = 0.0,
 
 
 //Models to be loaded
-ModelLoader ship;
 ModelLoader sky;
 ModelLoader sun;
-ModelLoader water;
+//ModelLoader islands;
+ModelLoader ship;
+//ModelLoader enemy;
 
 //Shaders to be loaded
 ShaderLoader water_shader;
@@ -43,11 +47,19 @@ ShaderLoader water_shader;
 //textures to be loaded
 TextureLoader textures;
 
-//lists to be generated
-GLuint ship_list;
+//model lists to be generated
 GLuint sky_list;
 GLuint sun_list;
+//GLuint island_list;
 GLuint water_list;
+GLuint ship_list;
+//GLuint enemy_list;
+
+//shader lists to be generated
+GLuint water_shader_list;
+
+//array to hold the water mesh
+float mesh_dimensions[ mesh_size ][ mesh_size ][3];
 
 //programs to be used for the shader
 GLint water_shader_program;
@@ -75,62 +87,8 @@ void delete_vector(GLfloat** my_vector, int row) {
   delete [] my_vector;
 }
 
-//prints a 2D array pointed by 'my_vector'
-void print_vector(GLfloat** my_vector, int rows, int cols) {
-	for(int i = 0; i < rows; i++) {
-		for(int j = 0; j < cols; j++) {
-			cout << my_vector[i][j] << "\t";
-		}
-		cout << "\n";
-	}
-	cout << "\n";
-}
-
-//handle to read models.txt and load models in parallel
-int load_models() {
-	string ship_model = "../models/ship.obj";
-	string sky_model = "../models/sky.obj";
-	string sun_model = "../models/sun.obj";
-	string water_model = "../models/water.obj";
-
-	ship.LoadModel(ship_model);
-	sky.LoadModel(sky_model);
-	sun.LoadModel(sun_model);
-	water.LoadModel(water_model);
-
-	return 0;
-}
-
-//read the texture file and load all the textures
-int load_textures(string& texture_file) {
-	int number_of_textures = 0;
-	string texture_file_name;
-	fstream texture_loader;
-
-	texture_loader.open(texture_file, ios::in);
-
-	if(!texture_loader) {
-		return 1;
-	}
-
-	texture_loader.ignore(1024, '\n');
-	texture_loader >> number_of_textures;
-
-	texture_file_names = new string[number_of_textures];
-	texture_images = new GLuint[number_of_textures];
-
-	for(int i = 0; i < number_of_textures; i++) {
-		texture_loader >> texture_file_name;
-		texture_file_names[i] = texture_file_name;
-	}
-
-	textures.LoadTextures(texture_file_names, number_of_textures, texture_images);
-
-	return 0;
-}
-
 //generate the call list from the model and the call list value
-int generate_call_list(ModelLoader& model, GLuint model_call_list) {
+int generate_model_display_list(ModelLoader& model, GLuint model_call_list) {
 	if(model_call_list != 0) {
 		string current_material;
 		string current_texture;
@@ -223,11 +181,104 @@ int generate_call_list(ModelLoader& model, GLuint model_call_list) {
 	return 0;
 }
 
+//generates the call lists for all the shaders used in the program
+int generate_shader_display_list(string& vertex_shader_name, string& fragment_shader_name, GLuint& shader_call_list) {
+	int return_value = 0;
+
+	if(shader_call_list != 0) {
+		glNewList(shader_call_list, GL_COMPILE);
+			return_value = water_shader.LoadShader(vertex_shader_name, fragment_shader_name, water_shader_program);
+		glEndList();
+	}
+
+	return return_value;
+}
+
 //displays the text on the screen
 void load_text(string text, string font_type, FTPoint& position) {
 	FTGLPixmapFont font(font_type.c_str());
 	font.FaceSize(72);
 	font.Render(text.c_str(), -1, position);
+}
+
+//handle to read models.txt and load models in parallel
+int load_models() {
+	string ship_model = "../models/ship.obj";
+	string sky_model = "../models/sky.obj";
+	string sun_model = "../models/sun.obj";
+
+	ship.LoadModel(ship_model);
+	sky.LoadModel(sky_model);
+	sun.LoadModel(sun_model);
+
+	return 0;
+}
+
+//read the texture file and load all the textures
+int load_textures(string& texture_file) {
+	int number_of_textures = 0;
+	string texture_file_name;
+	fstream texture_loader;
+
+	texture_loader.open(texture_file, ios::in);
+
+	if(!texture_loader) {
+		return 1;
+	}
+
+	texture_loader.ignore(1024, '\n');
+	texture_loader >> number_of_textures;
+
+	texture_file_names = new string[number_of_textures];
+	texture_images = new GLuint[number_of_textures];
+
+	for(int i = 0; i < number_of_textures; i++) {
+		texture_loader >> texture_file_name;
+		texture_file_names[i] = texture_file_name;
+	}
+
+	textures.LoadTextures(texture_file_names, number_of_textures, texture_images);
+
+	return 0;
+}
+
+//create and generate all display lists
+void create_call_lists() {
+	//create the model display lists
+	ship_list = glGenLists(1);
+	sky_list = glGenLists(1);
+	sun_list = glGenLists(1);
+
+	//create the shader display lists
+	water_shader_list = glGenLists(1);
+
+	//generate all the model display lists
+	generate_model_display_list(ship, ship_list);
+	generate_model_display_list(sky, sky_list);
+	generate_model_display_list(sun, sun_list);
+
+	//shows the list of shaders to be used
+	string water_vertex_shader = "water_shader.vert";
+	string water_fragment_shader = "";
+
+	//generate all the shader display lists
+	generate_shader_display_list(water_vertex_shader, water_fragment_shader, water_shader_list);
+}
+
+//create the water mesh to display water
+void create_water_mesh() {
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);					// Draw Our Mesh In Wireframe Mode
+	
+	// Create Our Mesh
+	for (int x = 0; x < mesh_size; x++)
+	{
+		for (int z = 0; z < mesh_size; z++)
+		{
+			mesh_dimensions[x][z][0] = (float) (mesh_size / 2) - x;				// We Want To Center Our Mesh Around The Origin
+			mesh_dimensions[x][z][1] = (float) 0.0;						// Set The Y Values For All Points To 0
+			mesh_dimensions[x][z][2] = (float) (mesh_size / 2) - z;				// We Want To Center Our Mesh Around The Origin
+		}
+	}
 }
 
 //determines the x and z frequencies of the wind based on direction
@@ -299,11 +350,14 @@ void init() {
 
 	//write loading... on the screen
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	//add a texture image for the game
-	//add flashing for the loading sign
+		//add a texture image for the game
+		//add flashing for the loading sign
 	FTPoint text_position(window_width*0.36, window_height*0.25);
 	load_text("Loading...", "../fonts/CAMBRIA.ttf", text_position);
 	glfwSwapBuffers();
+
+	//create shader programs
+	water_shader_program = glCreateProgram();
 
 	//load all models
 	load_models();
@@ -312,23 +366,21 @@ void init() {
 	string texture_file_name = "textures.txt";
 	load_textures(texture_file_name);
 
-	//create the call lists
-	ship_list = glGenLists(1);
-	sky_list = glGenLists(1);
-	sun_list = glGenLists(1);
-	water_list = glGenLists(1);
+	//create all call lists
+	create_call_lists();
 
-	//generate all the call lists
-	generate_call_list(ship, ship_list);
-	generate_call_list(sky, sky_list);
-	generate_call_list(sun, sun_list);
-	generate_call_list(water, water_list);
-
-	//create shader programs
-	water_shader_program = glCreateProgram();
+	//create water mesh
+	create_water_mesh();
 }
 
 void exit() {
+	//clear all the heap memory
+	delete texture_images;
+	texture_images = NULL;
+
+	delete[] texture_file_names;
+	texture_file_names = NULL;
+
 	// Close window and terminate GLFW
 	glfwTerminate();
 
@@ -338,6 +390,46 @@ void exit() {
 
 void draw_model(GLuint& model_list) {
 	glCallList(model_list);
+}
+
+void draw_water() {
+	if(water_list == 0) {
+		string water_texture;
+		water_list = glGenLists(1);
+
+		glNewList(water_list, GL_COMPILE);
+			water_texture = "blue_water.tga";
+			int texture_index = 0;
+			while(water_texture.compare(texture_file_names[texture_index]) != 0) {
+				texture_index++;
+			}
+
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+
+			// Start Drawing Our Mesh
+			float float_x, float_z, float_xb;
+			for (int x = 0; x < mesh_size - 1; x++) {
+				// Draw A Triangle Strip For Each Column Of Our Mesh
+				glBegin(GL_TRIANGLE_STRIP);
+				for (int z = 0; z < mesh_size - 1; z++) {
+					// texture points to be used
+					float_x = float(x)/mesh_size;		
+					float_z = float(z)/mesh_size;
+					float_xb = float(x+1)/mesh_size;
+			
+					// Set The Wave Parameter Of Our Shader To The Incremented Wave Value From Our Main Program
+					glTexCoord2f( float_x, float_z);
+					glVertex3f(mesh_dimensions[x][z][0], mesh_dimensions[x][z][1], mesh_dimensions[x][z][2]);	// Draw Vertex
+
+					glTexCoord2f( float_xb, float_z );
+					glVertex3f(mesh_dimensions[x+1][z][0], mesh_dimensions[x+1][z][1], mesh_dimensions[x+1][z][2]);	// Draw Vertex
+				}
+				glEnd();
+			}
+		glEndList();
+	} else {
+		glCallList(water_list);
+	}
 }
 
 void draw_top_world() {
@@ -352,7 +444,7 @@ void draw_top_world() {
 	//draw sun
 	//billboard the sun
 	GLfloat sun_starting_x = 10.0;
-	GLfloat sun_starting_y = 12.0;
+	GLfloat sun_starting_y = 8.0;
 	GLfloat sun_starting_z = -20.0;
 	GLfloat starting_angle = atan(sun_starting_y/(-sun_starting_z));
 	glPushMatrix();
@@ -367,37 +459,28 @@ void draw_top_world() {
 }
 
 void draw_bottom_world() {
-	GLint location_time, location_wind, location_x_frequency, location_z_frequency;
+	GLint location_time, location_wind;
 
 	current_time = glfwGetTime();
 	wind_direction = "east";
 	calculate_wind_frequencies();
 
-	string vertex_shader = "water_shader.vert";
-	string fragment_shader = "";
-
-	water_shader.LoadShader(vertex_shader, fragment_shader, water_shader_program);
-
+	glCallList(water_shader_list);
+	
 	location_time = glGetUniformLocation(water_shader_program, "time");
 	glUniform1f(location_time, current_time);
 
 	location_wind = glGetUniformLocation(water_shader_program, "wind_factor");
 	glUniform1f(location_wind, wind_factor);
 
-	location_x_frequency = glGetUniformLocation(water_shader_program, "x_frequency");
-	glUniform1f(location_x_frequency, wind_x_frequency);
-
-	location_z_frequency = glGetUniformLocation(water_shader_program, "z_frequency");
-	glUniform1f(location_z_frequency, wind_z_frequency);
-
 	//draw water
 	glPushMatrix();
 	{	
-		glTranslatef(0, -2, 0);
-		draw_model(water_list);
+		glTranslatef(0, -2.0, 0);
+		draw_water();
 	}
 	glPopMatrix();
-	water_shader.DetachShader();
+	water_shader.DetachShader(water_shader_program);
 
 	//draw islands
 	
@@ -409,13 +492,14 @@ void render() {
 	GLfloat forward_movement;
 
 	glLoadIdentity();
-	glTranslatef(0.0, 0.0, -3.0);
+	glTranslatef(0.0, 0.0, -5.0);
+	glRotatef(15, 1.0, 0.0, 0.0);
 
 	//if the up key is pressed, move in the positive x and z direction
 	if(glfwGetKey(GLFW_KEY_UP) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		x_position -= (float)sin(rotation_value*pi_conversion) * 0.5f;
-		z_position -= (float)cos(rotation_value*pi_conversion) * 0.5f;
+		x_position -= (float)sin(rotation_value*pi_conversion) * 0.3f;
+		z_position -= (float)cos(rotation_value*pi_conversion) * 0.3f;
 
 		//handle camera movement based on wave movement
 	}
@@ -423,8 +507,8 @@ void render() {
 	//if the down key is pressed, move in the negative x and z direction
 	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
 		viewing_value = 0.0;
-		x_position += (float)sin(rotation_value*pi_conversion) * 0.5f;
-		z_position += (float)cos(rotation_value*pi_conversion) * 0.5f;
+		x_position += (float)sin(rotation_value*pi_conversion) * 0.3f;
+		z_position += (float)cos(rotation_value*pi_conversion) * 0.3f;
 
 		//handle camera movement based on wave movement
 	}
@@ -451,8 +535,8 @@ void render() {
 	//draw the ship
 	glPushMatrix();
 	{
-		glScalef(0.15, 0.15, 0.15);
-		glRotatef(15, 1.0, 0.0, 0.0);
+		glScalef(0.25, 0.25, 0.25);
+		//glRotatef(15, 1.0, 0.0, 0.0);
 		glTranslatef(0.0, -4.0, 0.0);
 		draw_model(ship_list);
 	}
