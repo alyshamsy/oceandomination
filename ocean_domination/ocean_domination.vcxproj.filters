@@ -39,6 +39,15 @@
     <ClCompile Include="ShaderLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LevelLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Helper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GameWorld.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h">
@@ -62,15 +71,27 @@
     <ClInclude Include="ShaderLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LevelLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GameWorld.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="models.txt">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="textures.txt">
       <Filter>Source Files</Filter>
     </None>
     <None Include="water_shader.vert">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="default.level">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="levels.txt">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

@@ -59,9 +59,9 @@ At that point, if the line reads faces it starts to store the values into the ve
 The assumption is no preceding new line characters before the word vertices.
 Also assumes vertices and faces are spelt with lower cases
 */
-int ModelLoader::ParseFile(string& file_name) {
+int ModelLoader::ParseFile(string& model_file_name) {
 	stringstream face_values(stringstream::in | stringstream::out);
-	string current_definition, current_face_values;
+	string current_definition, current_face_values, file_name = "../models/";
 	int bad_input = 0, array_size;
 
 	Vertex model_vertices;
@@ -69,6 +69,7 @@ int ModelLoader::ParseFile(string& file_name) {
 	Vertex model_normal_vertices;
 	Face current_face;
 	MtlHandler model_materials;
+	file_name.append(model_file_name);
 
 	read_model_file.open(file_name, ios::in);
 	

@@ -21,7 +21,7 @@ public:
 	ModelLoader();
 	~ModelLoader();
 
-	int LoadModel(string& file_name);
+	int LoadModel(string& model_file_name);
 
 	struct Model {
 		vector<Vertex>* vertices;

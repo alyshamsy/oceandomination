@@ -5,9 +5,6 @@
 using namespace std;
 
 ShaderLoader::ShaderLoader() {
-	program_object = 0;
-	v_shader = 0;
-	f_shader = 0;
 }
 
 ShaderLoader::~ShaderLoader() {
