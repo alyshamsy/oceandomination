@@ -12,6 +12,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Face.cpp" />
+    <ClCompile Include="GameWorld.cpp" />
+    <ClCompile Include="Helper.cpp" />
+    <ClCompile Include="LevelLoader.cpp" />
     <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="MtlHandler.cpp" />
     <ClCompile Include="ocean_domination.cpp" />
@@ -22,16 +25,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h" />
+    <ClInclude Include="Helper.h" />
+    <ClInclude Include="LevelLoader.h" />
     <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="MtlHandler.h" />
     <ClInclude Include="ShaderLoader.h" />
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="TextureVertex.h" />
     <ClInclude Include="Vertex.h" />
+    <ClInclude Include="GameWorld.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="default.level" />
+    <None Include="levels.txt" />
     <None Include="textures.txt" />
-    <None Include="models.txt" />
     <None Include="water_shader.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
