@@ -40,15 +40,14 @@ void init() {
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_LIGHTING); 
-    //glEnable(GL_LIGHT0); 
+	 
     //glShadeModel (GL_SMOOTH); 
 	//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
 	//set up the camera and the viewport
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(105.0, aspect_ratio, 1.0, 10000.0);
+	gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
 
 	glMatrixMode(GL_MODELVIEW);
 
@@ -65,8 +64,6 @@ void init() {
 
 //exits the game
 void exit() {
-	//call the GameWorld Destructor
-
 	// Close window and terminate GLFW
 	glfwTerminate();
 

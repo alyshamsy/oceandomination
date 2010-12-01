@@ -37,6 +37,15 @@ Vertex::~Vertex() {
 }
 
 /*
+The setter method which takes in 3 parameters a, b and c and assigns them to x, y and z respectively
+*/
+void Vertex::set_vertex(double a, double b, double c) {
+	this->x = a;
+	this->y = b;
+	this->z = c;
+}
+
+/*
 The assignment operator is used to equate the local vertex to the value provided by the parameter and returns the local vertex
 */
 Vertex& Vertex::operator=(const Vertex& rhs) {
