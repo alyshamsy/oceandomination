@@ -16,6 +16,7 @@ public:
 	Vertex(const Vertex& source);
 	~Vertex();
 
+	void set_vertex(double a, double b, double c);
 	Vertex& operator=(const Vertex& rhs);
 	bool operator==(const Vertex& rhs);
 

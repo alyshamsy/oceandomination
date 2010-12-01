@@ -6,6 +6,8 @@
 #include "TextureLoader.h"
 #include "LevelLoader.h"
 #include "Helper.h"
+#include "Island.h"
+#include "Ship.h"
 
 #include <stdlib.h>
 #include <fstream>
@@ -18,6 +20,8 @@
 #define PI 3.14159265
 #define mesh_size 1000
 #define pi_conversion 0.0174532925
+#define degree_conversion 57.2957795785523
+#define light_size 4
 
 using namespace std;
 
@@ -40,7 +44,20 @@ private:
 	GLfloat current_time;
 
 	//movement in the world
-	GLfloat x_position, z_position, rotation_value, viewing_value, camera_movement;
+	GLfloat x_position, z_position, rotation_value, boat_movement;
+	GLfloat enemy_x_position, enemy_z_position, enemy_rotation_value, enemy_boat_movement;
+	GLfloat total_x_position, total_z_position, total_rotation_value;
+
+	Vertex current_ship_location;
+
+	//missile movements
+	float translation_x, translation_y, translation_z, scaling_factor;
+	float missile_start_time;
+	int ammo_number;
+
+	int ammo_mode;
+
+	bool shot_fired;
 
 	//Levels to be Loaded
 	LevelLoader game_levels;
@@ -95,6 +112,13 @@ private:
 	//list of texture file names
 	string* texture_file_names;
 
+	//vector of islands to be drawns
+	vector<Island> islands;
+
+	//List of ships to be used
+	Ship player_ship;
+	Ship enemy_ship;
+
 	//initialization functionality
 	int generate_model_display_list(ModelLoader& model, GLuint model_call_list);
 	int generate_shader_display_list(string& vertex_shader_name, string& fragment_shader_name, GLuint& shader_call_list);
@@ -107,15 +131,24 @@ private:
 
 	//game functionality
 	void update_wind_factor();
+	//void getEnemyMovement(GLfloat& total_x_position, GLfloat& total_z_position, GLfloat& total_rotation_value);
+
+	//Initialize game functionality
+	void initialize_lighting();
+	void initialize_islands();
+	void initialize_ship();
+	void initialize_enemy();
 
 	//draw functionality
 	void draw_model(GLuint& model_list);
+	void draw_world();
 	void draw_top_world();
 	void draw_bottom_world();
 	void draw_water();
 	void draw_islands();
 	void draw_ship();
 	void draw_enemy();
+	void draw_missile(bool shot_fired, int ammo_number, float angle, int mode);
 };
 
 #endif

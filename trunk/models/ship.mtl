@@ -1,7 +1,7 @@
 # Material Count: 9
 newmtl None_red.jpg
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -11,7 +11,7 @@ map_Kd red.tga
 
 newmtl None_dark-gray.jpg
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -21,7 +21,7 @@ map_Kd dark-gray.tga
 
 newmtl None_free-rusty-metal-text
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -31,7 +31,7 @@ map_Kd concrete.tga
 
 newmtl None_metal_texture_4_by_wo
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -41,7 +41,7 @@ map_Kd British.tga
 
 newmtl None_concrete-floor.jpg
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -51,7 +51,7 @@ map_Kd concrete.tga
 
 newmtl None_brushed-metal.tga
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -61,7 +61,7 @@ map_Kd black.tga
 
 newmtl None_dark-metal-textur
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -71,7 +71,7 @@ map_Kd dark-metal.tga
 
 newmtl None_brushed_metal_texture
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1
@@ -81,7 +81,7 @@ map_Kd diamond-black.tga
 
 newmtl None_brushed_metal_tex
 Ns 0
-Ka 0.000000 0.000000 0.000000
+Ka 0.700000 0.700000 0.700000
 Kd 0.8 0.8 0.8
 Ks 0.8 0.8 0.8
 d 1

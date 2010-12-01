@@ -12,24 +12,30 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Face.cpp" />
+    <ClCompile Include="GameAI.cpp" />
     <ClCompile Include="GameWorld.cpp" />
     <ClCompile Include="Helper.cpp" />
+    <ClCompile Include="Island.cpp" />
     <ClCompile Include="LevelLoader.cpp" />
     <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="MtlHandler.cpp" />
     <ClCompile Include="ocean_domination.cpp" />
     <ClCompile Include="ShaderLoader.cpp" />
+    <ClCompile Include="Ship.cpp" />
     <ClCompile Include="TextureLoader.cpp" />
     <ClCompile Include="TextureVertex.cpp" />
     <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h" />
+    <ClInclude Include="GameAI.h" />
     <ClInclude Include="Helper.h" />
+    <ClInclude Include="Island.h" />
     <ClInclude Include="LevelLoader.h" />
     <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="MtlHandler.h" />
     <ClInclude Include="ShaderLoader.h" />
+    <ClInclude Include="Ship.h" />
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="TextureVertex.h" />
     <ClInclude Include="Vertex.h" />

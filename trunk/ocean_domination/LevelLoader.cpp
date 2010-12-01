@@ -71,7 +71,7 @@ int LevelLoader::LoadLevel(string& level_file_name) {
 
 		for(int i = 0; i < island_number; i++) {
 			level_reader >> island_location.x >> island_location.z;
-			island_location.y = -4.5;
+			island_location.y = -3.5;
 
 			island_coordinates->push_back(island_location);
 		}
