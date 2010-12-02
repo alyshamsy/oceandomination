@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Face.cpp" />
-    <ClCompile Include="GameAI.cpp" />
     <ClCompile Include="GameWorld.cpp" />
     <ClCompile Include="Helper.cpp" />
     <ClCompile Include="Island.cpp" />
@@ -28,7 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h" />
-    <ClInclude Include="GameAI.h" />
     <ClInclude Include="Helper.h" />
     <ClInclude Include="Island.h" />
     <ClInclude Include="LevelLoader.h" />

@@ -60,6 +60,32 @@ Vertex& Vertex::operator=(const Vertex& rhs) {
 }
 
 /*
+the addition operation adds the 2 vertices provided and returns a vertex with the respective x, y and z variables added
+*/
+Vertex operator+(Vertex& A, Vertex& B) {
+	Vertex added_vector;
+
+	added_vector.x = A.x + B.x;
+	added_vector.y = A.y + B.y;
+	added_vector.z = A.z + B.z;
+
+	return added_vector;
+}
+
+/*
+the subtraction operation subtracts the 2 vertices provided and returns the vertex with the respective x, y and z variablessubtracted
+*/
+Vertex operator-(Vertex& A, Vertex& B) {
+	Vertex subtracted_vector;
+
+	subtracted_vector.x = A.x - B.x;
+	subtracted_vector.y = A.y - B.y;
+	subtracted_vector.z = A.z - B.z;
+
+	return subtracted_vector;
+}
+
+/*
 The equals operation which checks if the values of the parameter vertex is the same as the local vertex and returns true else returns false
 */
 bool Vertex::operator==(const Vertex& rhs) {
