@@ -82,11 +82,47 @@ int main() {
 
 	// Main loop
 	while( running ) {
-		// OpenGL rendering goes here ...
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
+		
 		//updates the world
 		current_game.UpdateGameWorld();
+
+		int window_width = 1280, window_height = 720;
+		float aspect_ratio = (float)window_width/window_height;
+
+
+		//single player view
+		glViewport(0,0, window_width, window_height);
+		glScissor(0,0, window_width, window_height);
+		glEnable(GL_SCISSOR_TEST);
+		
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+		//set up the camera and the viewport
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
+
+		glMatrixMode(GL_MODELVIEW);
+
+		current_game.draw_world();
+
+		/*	
+			//2nd view
+			glViewport(0,0, window_width/4.0f, window_height/4.0f);
+			glScissor(0,0, window_width/4.0f, window_height/4.0f);
+			glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
+			glClear( GL_DEPTH_BUFFER_BIT );
+
+			//set up the camera and the viewport
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(35.0, aspect_ratio, 1.0, 10000.0);
+
+			glMatrixMode(GL_MODELVIEW);
+
+			//transform for second player			
+			current_game.draw_world();
+		*/
 
 		// Swap front and back rendering buffers
 		glfwSwapBuffers();

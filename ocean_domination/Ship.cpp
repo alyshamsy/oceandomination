@@ -1,11 +1,9 @@
 #include "Ship.h"
 
 Ship::Ship() {
-
 }
 
 Ship::~Ship() {
-
 }
 
 int Ship::InitializeShip(Vertex location) {

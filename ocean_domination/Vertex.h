@@ -18,6 +18,8 @@ public:
 
 	void set_vertex(double a, double b, double c);
 	Vertex& operator=(const Vertex& rhs);
+	friend Vertex operator+(Vertex& A, Vertex& B);
+	friend Vertex operator-(Vertex& A, Vertex& B);
 	bool operator==(const Vertex& rhs);
 
 	float x, y, z;
