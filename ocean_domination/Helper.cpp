@@ -50,3 +50,12 @@ float getSmallestValue(vector<float> arr, int& index) {
 
 	return smallest_value;
 }
+
+string intToString(int a) {
+	string output;
+	stringstream out;
+	out << a;
+	output = out.str();
+
+	return output;
+}

@@ -13,18 +13,19 @@ public:
 	Ship();
 	~Ship();
 
-	int InitializeShip(Vertex location);
-	int UpdateShipLocation(Vertex location);
-	int UpdateShip(int current_health, int current_missiles, int current_super_missiles, int current_sniper_bullets);
+	int InitializeShip(Vertex& location);
+	int UpdateShipLocation(Vertex& location);
+	int UpdateHealth(int& current_health);
+	int UpdateScore(int& current_score);
 	
 	Vertex getLocation() { return location; }
 	int getHealth() { return health; }
-
-	float getShipRadius() { return ship_radius; }
 	
+	float getShipRadius() { return ship_radius; }
 	float getMissileRadius() { return missile_radius; }
 	float getBulletRadius() { return bullet_radius; }
 	float getSuperMissileRadius() { return super_missile_radius; }
+	int getCurrentScore() { return score; }
 
 	struct Ammo {
 		int missiles;
@@ -35,6 +36,7 @@ public:
 private:
 	Vertex location;
 	int health; 
+	int score;
 };
 
 #endif Island_H

@@ -32,12 +32,15 @@ public:
 
 	int InitializeGameWorld();
 	int CreateGameWorld();
-	void UpdateGameWorld();
+	int UpdateGameWorld();
 	int RestartGame();
 
 	void draw_world();
 
 private:
+	//game window dimensions
+	int window_width, window_height;
+
 	//wind values in the world
 	float wind_factor;
 	
@@ -56,7 +59,7 @@ private:
 	GLfloat forward_movement, enemy_forward_movement;
 
 	//variables to detect collision
-	int ship_collision, ammo_collision;
+	int ship_collision, ammo_collision, ammo_ship_collision;
 
 	//stores which island is currently under attack
 	int island_under_attack;
@@ -64,12 +67,15 @@ private:
 	//stores the current location of the ship
 	Vertex current_ship_location;
 	Vertex current_ammo_location;
-	Vertex current_island_ammo_location;
 
 	//missile movements
 	float translation_x, translation_y, translation_z, scaling_factor;
 	float missile_start_time, button_timeout;
 	int ammo_number;
+
+	//island missile movement variables
+	float weapon_translation_x, weapon_translation_y, weapon_translation_z, weapon_scaling_factor;
+	float island_weapon_time;
 
 	//mode of firing 1 = regular, 2 = sniper, 3 = super missile
 	int ammo_mode;
@@ -77,8 +83,11 @@ private:
 	//checks to see if a shot was fired
 	bool shot_fired;
 
+	//checks to see if the island should fire
+	bool fire_next_missile;
+
 	//Island AI variables
-	
+	float weapon_movement_angle;
 
 	//Levels to be Loaded
 	LevelLoader game_levels;
@@ -95,6 +104,7 @@ private:
 	ModelLoader missile;
 	ModelLoader super_missile;
 	ModelLoader weapon;
+	ModelLoader canon;
 
 	//Shaders to be loaded
 	ShaderLoader water_shader;
@@ -115,12 +125,14 @@ private:
 	GLuint missile_list;
 	GLuint super_missile_list;
 	GLuint weapon_list;
+	GLuint canon_list;
 
 	//shader lists to be generated
 	GLuint water_shader_list;
 
 	//array to hold the water mesh
 	float mesh_dimensions[ mesh_size ][ mesh_size ][3];
+	float health_bar[10][10][3];
 
 	//programs to be used for the shader
 	GLint water_shader_program;
@@ -151,6 +163,7 @@ private:
 	int load_textures(string& texture_file);
 	void create_call_lists();
 	void create_water_mesh();
+	void create_health_bar();
 
 	//Create game functionality
 	void initialize_lighting();
@@ -162,12 +175,14 @@ private:
 	//game functionality
 	void update_wind_factor();
 	void generate_quad_islands();
-	void perform_island_AI(Vertex ship_location);
-	int detect_ship_collision(Vertex ship_location);
-	int detect_ammo_collision(Vertex ammo_location, int& island_under_attack);
-	int detect_ammo_ship_location(Vertex ammo_location, Vertex ship_location);
-	int detect_power_ups(Vertex ship_location);
-	void reduce_island_health(int island_number);
+	void perform_island_AI(Vertex& ship_location);
+	int detect_ship_collision(Vertex& ship_location);
+	int detect_ammo_collision(Vertex& ammo_location, int& island_under_attack);
+	int detect_ammo_ship_collision(Vertex& ammo_location, Vertex& ship_location);
+	int detect_power_ups(Vertex& ship_location);
+	void reduce_island_health(int& island_number);
+	void reduce_ship_health(int type);
+	void update_score(int& island_number);
 
 	//draw functionality
 	void draw_model(GLuint& model_list);
@@ -179,6 +194,7 @@ private:
 	void draw_enemy();
 	void draw_ammo(bool shot_fired, int ammo_number, float angle);
 	void draw_island_ammo();
+	void draw_health_bar();
 };
 
 #endif
