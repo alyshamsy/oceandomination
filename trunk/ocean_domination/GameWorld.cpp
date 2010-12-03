@@ -7,6 +7,9 @@ GLfloat specular_light[] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat light_position[] = { 12.0f, 8.0f, -40.0f, 1.0f };
 
 GameWorld::GameWorld() {
+	//game window dimensions
+	window_width = 1280, window_height = 720;
+
 	//set the starting wind factor in the game (moves the waves)
 	wind_factor = 0.5;
 	
@@ -34,6 +37,8 @@ GameWorld::GameWorld() {
 	side_movement = 0.0;
 	forward_movement = 0.0;
 
+	weapon_movement_angle = 0.0;
+
 	enemy_rotation = 0.0;
 	enemy_side_movement = 0.0;
 	enemy_forward_movement = 0.0;
@@ -43,8 +48,15 @@ GameWorld::GameWorld() {
 	translation_z = 0.0;
 	scaling_factor = 0.0;
 
+	weapon_translation_x = 0.0;
+	weapon_translation_y = 0.0;
+	weapon_translation_z = 0.0;
+	weapon_scaling_factor = 0.0;
+
 	missile_start_time = 0.0;
 	button_timeout = 0.0;
+
+	island_weapon_time = 0.0;
 
 	ammo_number = 0;
 
@@ -52,10 +64,12 @@ GameWorld::GameWorld() {
 
 	ship_collision = 0;
 	ammo_collision = 0;
+	ammo_ship_collision = 0;
 
 	island_under_attack = 0;
 
 	shot_fired = false;
+	fire_next_missile = false;
 }
 
 GameWorld::~GameWorld() {
@@ -102,7 +116,7 @@ int GameWorld::CreateGameWorld() {
 	return 0;
 }
 
-void GameWorld::UpdateGameWorld() {
+int GameWorld::UpdateGameWorld() {
 	Vertex target_location;
 	Vertex next_ship_location = current_ship_location;
 
@@ -175,36 +189,6 @@ void GameWorld::UpdateGameWorld() {
 		ammo_number += 1;
 	}
 
-	//change the fire mode to either regular, sniper or super missile mode
-	if(shot_fired == true) {
-		current_time = glfwGetTime();
-		if(ammo_mode == 1 && current_time - missile_start_time >= 0.5) {
-			reduce_island_health(island_under_attack);
-			missile_start_time = glfwGetTime();
-			shot_fired = false;
-			translation_x = 0.0;
-			translation_y = 0.0;
-			translation_z = 0.0;
-			scaling_factor = 0.0;
-		} else if(ammo_mode == 2 && current_time - missile_start_time >= 1.0) {
-			reduce_island_health(island_under_attack);
-			missile_start_time = glfwGetTime();
-			shot_fired = false;
-			translation_x = 0.0;
-			translation_y = 0.0;
-			translation_z = 0.0;
-			scaling_factor = 0.0;
-		} else if(ammo_mode == 3 && current_time - missile_start_time >= 1.5) {
-			reduce_island_health(island_under_attack);
-			missile_start_time = glfwGetTime();
-			shot_fired = false;
-			translation_x = 0.0;
-			translation_y = 0.0;
-			translation_z = 0.0;
-			scaling_factor = 0.0;
-		}
-	}
-
 	//adjusting rotation and forward and backward movement
 	scene_rotation = 360.0 - rotation_value;
 	side_movement = -current_ship_location.x;
@@ -215,21 +199,77 @@ void GameWorld::UpdateGameWorld() {
 
 	//detect if there is ammo collision
 	ammo_collision = detect_ammo_collision(current_ammo_location, island_under_attack);
-	if(ammo_collision) {
-		islands.at(island_under_attack).UpdateUnderAttack(true);
-		current_time = glfwGetTime();
-		if(ammo_mode == 1 && current_time - missile_start_time >= 0.5) {
-			reduce_island_health(island_under_attack);
-		} else if(ammo_mode == 2 && current_time - missile_start_time >= 1.0) {
-			reduce_island_health(island_under_attack);
 
-		} else if(ammo_mode == 3 && current_time - missile_start_time >= 1.5) {
-			reduce_island_health(island_under_attack);
+	//change the fire mode to either regular, sniper or super missile mode
+	if(shot_fired == true) {
+		if(ammo_collision) {
+			islands.at(island_under_attack).UpdateUnderAttack(true);
+			if(ammo_mode == 1 && glfwGetTime() - missile_start_time >= 0.5) {
+				reduce_island_health(island_under_attack);
+			} else if(ammo_mode == 2 && glfwGetTime() - missile_start_time >= 0.2) {
+				reduce_island_health(island_under_attack);
+			} else if(ammo_mode == 3 && glfwGetTime() - missile_start_time >= 0.75) {
+				reduce_island_health(island_under_attack);
+			}
+		}
+		
+		if(ammo_mode == 1 && glfwGetTime() - missile_start_time >= 0.5) {
+			missile_start_time = glfwGetTime();
+			shot_fired = false;
+			translation_x = 0.0;
+			translation_y = 0.0;
+			translation_z = 0.0;
+			scaling_factor = 0.0;
+		} else if(ammo_mode == 2 && glfwGetTime() - missile_start_time >= 1.0) {
+			missile_start_time = glfwGetTime();
+			shot_fired = false;
+			translation_x = 0.0;
+			translation_y = 0.0;
+			translation_z = 0.0;
+			scaling_factor = 0.0;
+		} else if(ammo_mode == 3 && glfwGetTime() - missile_start_time >= 1.0) {
+			missile_start_time = glfwGetTime();
+			shot_fired = false;
+			translation_x = 0.0;
+			translation_y = 0.0;
+			translation_z = 0.0;
+			scaling_factor = 0.0;
 		}
 	}
 
 	perform_island_AI(current_ship_location);
-	//IslandAI();
+
+	//detect island ammo and boat collision
+	int total_islands = islands.size();
+	if(fire_next_missile == true) {
+		for(int i = 0; i < total_islands; i++) {
+			if(islands.at(i).doWeaponFire() == true) {
+				ammo_ship_collision = detect_ammo_ship_collision(islands.at(i).getAmmoLocation(), current_ship_location);
+				islands.at(i).ResetAmmoLocation();
+				current_time = glfwGetTime();
+				if(ammo_ship_collision && current_time - island_weapon_time >= 1.0) {
+					reduce_ship_health(1);
+				}
+			}
+		}
+	}
+
+	if(glfwGetTime() - island_weapon_time >= 2.0) {
+		island_weapon_time = glfwGetTime();
+		weapon_translation_x = 0.0;
+		weapon_translation_y = 0.0;
+		weapon_translation_z = 0.0;
+		weapon_scaling_factor = 0.0;
+		fire_next_missile = true;
+	}
+
+	if(player_ship.getHealth() == 0 ) {
+		return 1;
+	} else if(islands.size() == 0) {
+		return 2;
+	}
+
+	return 0;
 }
 
 //restarts the game
@@ -371,6 +411,7 @@ int GameWorld::load_models() {
 	string missile_model = "missile.obj";
 	string super_missile_model = "super-missile.obj";
 	string weapon_model = "weapon.obj";
+	string canon_model = "canon.obj";
 
 	ship.LoadModel(ship_model);
 	enemy.LoadModel(enemy_model);
@@ -383,6 +424,7 @@ int GameWorld::load_models() {
 	missile.LoadModel(missile_model);
 	super_missile.LoadModel(super_missile_model);
 	weapon.LoadModel(weapon_model);
+	canon.LoadModel(canon_model);
 
 	return 0;
 }
@@ -429,6 +471,7 @@ void GameWorld::create_call_lists() {
 	missile_list = glGenLists(1);
 	super_missile_list = glGenLists(1);
 	weapon_list = glGenLists(1);
+	canon_list = glGenLists(1);
 
 	//create the shader display lists
 	water_shader_list = glGenLists(1);
@@ -445,6 +488,7 @@ void GameWorld::create_call_lists() {
 	generate_model_display_list(missile, missile_list);
 	generate_model_display_list(super_missile, super_missile_list);
 	generate_model_display_list(weapon, weapon_list);
+	generate_model_display_list(canon, canon_list);
 
 	//shows the list of shaders to be used
 	string water_vertex_shader = "water_shader.vert";
@@ -459,13 +503,24 @@ void GameWorld::create_water_mesh() {
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);					// Draw Our Mesh In Wireframe Mode
 	
 	// Create Our Mesh
-	for (int x = 0; x < mesh_size; x++)
-	{
-		for (int z = 0; z < mesh_size; z++)
-		{
+	for (int x = 0; x < mesh_size; x++) {
+		for (int z = 0; z < mesh_size; z++) {
 			mesh_dimensions[x][z][0] = (float) (mesh_size / 2) - x;				// We Want To Center Our Mesh Around The Origin
 			mesh_dimensions[x][z][1] = (float) 0.0;						// Set The Y Values For All Points To 0
 			mesh_dimensions[x][z][2] = (float) (mesh_size / 2) - z;				// We Want To Center Our Mesh Around The Origin
+		}
+	}
+}
+
+//creates the mesh for the healthbar
+void GameWorld::create_health_bar() {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	// Loop Through The X Plane
+	for(int x = 0; x < 10; x++) {
+		for(int y = 0; y < 10; y++) {
+			health_bar[x][y][0] = (float) (10 / 2) - x;
+			health_bar[x][y][1] = (float) (10 / 2) - y;
+			health_bar[x][y][2] = 0;
 		}
 	}
 }
@@ -572,9 +627,9 @@ void GameWorld::generate_quad_islands() {
 }
 
 //perform the AI of the islands
-void GameWorld::perform_island_AI(Vertex ship_location) {
+void GameWorld::perform_island_AI(Vertex& ship_location) {
 	int start_defending = 0;
-	float defence_radius = 60.0f;
+	float defence_radius = 0.0f;
 
 	double within_distance = 0.00000000000001;
 	double distance_squared = 0.0;
@@ -587,6 +642,7 @@ void GameWorld::perform_island_AI(Vertex ship_location) {
 
 	for(int i = 0; i < total_islands; i++) {
 		island_location = islands.at(i).getLocation();
+		defence_radius = islands.at(i).getDefenceRadius();
 
 		radii_squared = ((defence_radius + player_ship.getShipRadius()) * (defence_radius + player_ship.getShipRadius()));
 		distance_squared = ((island_location.x - ship_location.x) * (island_location.x - ship_location.x)) + ((island_location.z - ship_location.z) * (island_location.z - ship_location.z));
@@ -595,31 +651,34 @@ void GameWorld::perform_island_AI(Vertex ship_location) {
 		if (within_distance < overlap ) {
 			start_defending = 1;
 			Vertex weapon_location = island_location;
-			float current_weapon_rotation_angle_side;
-			//float current_weapon_rotation_angle_up;
-			//float hyp;
+			float current_weapon_rotation_angle;
 
 			islands.at(i).UpdateWeaponFire(true);
 
 			if(islands.at(i).getIslandType() == 'L') {
 				weapon_location.set_vertex(island_location.x + 10.0, 20.0, island_location.z - 4.0);
-				current_weapon_rotation_angle_side = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;
-				islands.at(i).UpdateWeaponRotationAngleSide(current_weapon_rotation_angle_side);
+				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;
+				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
+				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
 			} else if(islands.at(i).getIslandType() == 'M') {
 				weapon_location.set_vertex(island_location.x + 6.0, 10.0, island_location.z - 2.0);				
-				current_weapon_rotation_angle_side = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
-				islands.at(i).UpdateWeaponRotationAngleSide(current_weapon_rotation_angle_side);
+				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
+				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
+				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
 			} else {
 				weapon_location.set_vertex(island_location.x + 4.0, 5.0, island_location.z - 1.0);
-				current_weapon_rotation_angle_side = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
-				islands.at(i).UpdateWeaponRotationAngleSide(current_weapon_rotation_angle_side);
+				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
+				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
+				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
 			}
+		} else {
+			islands.at(i).UpdateWeaponFire(false);
 		}
 	}	
 }
 
 //detect collision of the ship with the island
-int GameWorld::detect_ship_collision(Vertex ship_location) {
+int GameWorld::detect_ship_collision(Vertex& ship_location) {
 	int collision = 0;
 
 	double collision_distance = 0.00000000000001;
@@ -646,7 +705,7 @@ int GameWorld::detect_ship_collision(Vertex ship_location) {
 }
 
 //detect collision of islands with the ammo
-int GameWorld::detect_ammo_collision(Vertex ammo_location, int& island_under_attack) {
+int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_attack) {
 	int collision = 0;
 	
 	float ammo_radius = 0.0;
@@ -685,19 +744,17 @@ int GameWorld::detect_ammo_collision(Vertex ammo_location, int& island_under_att
 }
 
 //detects if the ammo from the island hit the ship
-int GameWorld::detect_ammo_ship_location(Vertex ammo_location, Vertex ship_location) {
+int GameWorld::detect_ammo_ship_collision(Vertex& ammo_location, Vertex& ship_location) {
 	int collision = 0;
 	
-	float ammo_radius = 0.0;
-
-	ammo_radius = player_ship.getMissileRadius();
+	float island_ammo_radius = 0.6f;
 
 	double collision_distance = 0.00000000000001;
 	double distance_squared = 0.0;
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	radii_squared = ((player_ship.getShipRadius() + ammo_radius) * (player_ship.getShipRadius() + ammo_radius));
+	radii_squared = ((player_ship.getShipRadius() + island_ammo_radius) * (player_ship.getShipRadius() + island_ammo_radius));
 	distance_squared = ((ship_location.x - ammo_location.x) * (ship_location.x - ammo_location.x)) + ((ship_location.z - ammo_location.z) * (ship_location.z - ammo_location.z));
 	overlap = radii_squared - distance_squared;
 		
@@ -709,16 +766,17 @@ int GameWorld::detect_ammo_ship_location(Vertex ammo_location, Vertex ship_locat
 }
 
 //detect collision with the power ups
-int GameWorld::detect_power_ups(Vertex ship_location) {
+int GameWorld::detect_power_ups(Vertex& ship_location) {
 	return 0;
 }
 
 //reduce the health of the island
-void GameWorld::reduce_island_health(int island_number){
+void GameWorld::reduce_island_health(int& island_number){
 	int health = islands.at(island_number).getHealth();
 	char island_type = islands.at(island_number).getIslandType();
-	
-	for(int i = 0; i < islands.size(); i++) {
+	int total_islands = islands.size();
+
+	for(int i = 0; i < total_islands; i++) {
 		if(i != island_number) {
 			islands.at(i).UpdateUnderAttack(false);
 		} 
@@ -728,6 +786,7 @@ void GameWorld::reduce_island_health(int island_number){
 		if(ammo_mode == 1) {
 			if(health <= 10) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 10;
@@ -736,6 +795,7 @@ void GameWorld::reduce_island_health(int island_number){
 		} else if(ammo_mode == 2) {
 			if(health == 5) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 5;
@@ -744,6 +804,7 @@ void GameWorld::reduce_island_health(int island_number){
 		} else {
 			if(health <= 50) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 50;
@@ -754,6 +815,7 @@ void GameWorld::reduce_island_health(int island_number){
 		if(ammo_mode == 1) {
 			if(health <= 20) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 20;
@@ -762,6 +824,7 @@ void GameWorld::reduce_island_health(int island_number){
 		} else if(ammo_mode == 2) {
 			if(health <= 10) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 10;
@@ -770,12 +833,45 @@ void GameWorld::reduce_island_health(int island_number){
 		} else {
 			if(health <= 100) {
 				health = 0;
+				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
 				health -= 100;
 				islands.at(island_number).UpdateHealth(health);
 			}
 		}
+	}
+}
+
+//reduce the health of the ship
+void GameWorld::reduce_ship_health(int type) {
+	int ship_health = 0;
+	if(type == 1) {
+		ship_health = player_ship.getHealth();
+
+		if(ship_health <= 10) {
+			ship_health = 0;
+		} else {
+			ship_health -= 10;
+		}
+		player_ship.UpdateHealth(ship_health);
+	}
+}
+
+//updates the players score
+void GameWorld::update_score(int& island_number) {
+	char island_type = islands.at(island_number).getIslandType();
+	int current_score = player_ship.getCurrentScore();
+
+	if(island_type == 'L') {
+		current_score += 20;
+		player_ship.UpdateScore(current_score);
+	} else if(island_type == 'M') {
+		current_score += 10;
+		player_ship.UpdateScore(current_score);
+	} else {
+		current_score += 5;
+		player_ship.UpdateScore(current_score);
 	}
 }
 
@@ -805,6 +901,28 @@ void GameWorld::draw_world() {
 		if(ammo_collision) {
 			//draw_smoke();
 		}
+	}
+	glPopMatrix();
+	
+	//draw extras on screen
+	glPushMatrix();
+	{
+		//draw health bar in the bottom left corner
+		//draw_health_bar();
+
+		//display frames per second on top right corner
+
+		//display ammo in centre bottom corner
+
+		//display text when power up picked up centre mid screen
+
+		//display score text
+		FTPoint score_text_position(window_width*0.85, window_height*0.03);
+		load_text("Score", "../fonts/PAPYRUS.ttf", score_text_position, 34);
+
+		FTPoint score_value_position(window_width*0.92, window_height*0.03);
+		string score = intToString(player_ship.getCurrentScore());
+		load_text(score, "../fonts/PAPYRUS.ttf", score_value_position, 34);
 	}
 	glPopMatrix();
 }
@@ -876,6 +994,14 @@ void GameWorld::draw_bottom_world() {
 	glPushMatrix();
 	{
 		draw_islands();
+		//draw_island_health();
+	}
+	glPopMatrix();
+
+	//draw islands ammo
+	glPushMatrix();
+	{
+		draw_island_ammo();
 	}
 	glPopMatrix();
 }
@@ -924,7 +1050,6 @@ void GameWorld::draw_water() {
 //draw all the islands
 void GameWorld::draw_islands() {
 	int total_islands = islands.size();
-	float leeway = 1.0;
 
 	for(int i = 0; i < total_islands; i++) {
 		Vertex island_location = islands.at(i).getLocation();
@@ -941,36 +1066,16 @@ void GameWorld::draw_islands() {
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x + 10.0, 20.0, island_location.z - 4.0);
-				/*
-				float movement_angle_side = islands.at(i).getWeaponMovementAngleSide();
-				float rotation_angle_side = islands.at(i).getWeaponRotationAngleSide();
-				if(movement_angle_side != rotation_angle_side) {
-					if(rotation_angle_side < 0)
-						movement_angle_side += 0.5f;
-					else
-						movement_angle_side -= 0.5f;
 
-					islands.at(i).UpdateWeaponMovementAngleSide(movement_angle_side);
-					glRotatef(movement_angle_side, 0.0, 1.0, 0.0);
-				}
+				float weapon_rotation_angle = islands.at(i).getWeaponRotationAngle();
+				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
-				float movement_angle_up = islands.at(i).getWeaponMovementAngleUp();
-				float rotation_angle_up = islands.at(i).getWeaponRotationAngleUp();
-				if(movement_angle_up != rotation_angle_side) {
-					if(rotation_angle_side > rotation_angle_up)
-						movement_angle_up += 0.5f;
-					else
-						movement_angle_up -= 0.5f;
-
-					islands.at(i).UpdateWeaponMovementAngleUp(movement_angle_up);
-					glRotatef(movement_angle_up, 1.0, 0.0, 0.0);
-				}
-				*/
+				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
 				draw_model(weapon_list);
 			}
 			glPopMatrix();		
 		} else if(islands.at(i).getIslandType() == 'M') {
-			//draw large islands
+			//draw medium islands
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x, island_location.y, island_location.z);
@@ -981,36 +1086,16 @@ void GameWorld::draw_islands() {
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x + 6.0, 10.0, island_location.z - 2.0);
-				/*
-				float movement_angle_side = islands.at(i).getWeaponMovementAngleSide();
-				float rotation_angle_side = islands.at(i).getWeaponRotationAngleSide();
-				if(movement_angle_side != rotation_angle_side) {
-					if(rotation_angle_side < 0)
-						movement_angle_side += 0.5f;
-					else
-						movement_angle_side -= 0.5f;
+				
+				float weapon_rotation_angle = islands.at(i).getWeaponRotationAngle();
+				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
-					islands.at(i).UpdateWeaponMovementAngleSide(movement_angle_side);
-					glRotatef(movement_angle_side, 0.0, 1.0, 0.0);
-				}
-
-				float movement_angle_up = islands.at(i).getWeaponMovementAngleUp();
-				float rotation_angle_up = islands.at(i).getWeaponRotationAngleUp();
-				if(movement_angle_up != rotation_angle_side) {
-					if(rotation_angle_side > rotation_angle_up)
-						movement_angle_up += 0.5f;
-					else
-						movement_angle_up -= 0.5f;
-
-					islands.at(i).UpdateWeaponMovementAngleUp(movement_angle_up);
-					glRotatef(movement_angle_up, 1.0, 0.0, 0.0);
-				}
-				*/
+				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
 				draw_model(weapon_list);
 			}
 			glPopMatrix();			
 		} else if(islands.at(i).getIslandType() == 'S') {
-			//draw large islands
+			//draw small islands
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x, island_location.y, island_location.z);
@@ -1022,36 +1107,10 @@ void GameWorld::draw_islands() {
 			{	
 				glTranslatef(island_location.x + 4.0, 5.0, island_location.z - 1.0);
 				
-				float movement_angle_side = islands.at(i).getWeaponMovementAngleSide();
-				float rotation_angle_side = islands.at(i).getWeaponRotationAngleSide();
-				if(rotation_angle_side < 0) {
-					if(rotation_angle_side < movement_angle_side) {
-						movement_angle_side -= 1.0f;
-						
-						islands.at(i).UpdateWeaponMovementAngleSide(movement_angle_side);
-						movement_angle_side = 360 - movement_angle_side;
-					}
-				} else {
-					if(rotation_angle_side > movement_angle_side) {
-						movement_angle_side += 1.0f;
+				float weapon_rotation_angle = islands.at(i).getWeaponRotationAngle();
+				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
-						islands.at(i).UpdateWeaponMovementAngleSide(movement_angle_side);
-					}
-				}
-				/*
-				float movement_angle_up = islands.at(i).getWeaponMovementAngleUp();
-				float rotation_angle_up = islands.at(i).getWeaponRotationAngleUp();
-				if(movement_angle_up != rotation_angle_side) {
-					if(rotation_angle_side > rotation_angle_up)
-						movement_angle_up += 0.5f;
-					else
-						movement_angle_up -= 0.5f;
-
-					islands.at(i).UpdateWeaponMovementAngleUp(movement_angle_up);
-					glRotatef(movement_angle_up, 1.0, 0.0, 0.0);
-				}
-				*/
-				glRotatef(movement_angle_side, 0.0, 1.0, 0.0);
+				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
 				draw_model(weapon_list);
 			}
 			glPopMatrix();			
@@ -1088,9 +1147,9 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 	if(!ammo_collision) {
 		if(ammo_mode == 1) {
 			if(shot_fired == true) {	
-				translation_x -= (float)sin(angle*radian_conversion) * 0.8f;
+				translation_x -= (float)sin(angle*radian_conversion) * 1.0f;
 				translation_y += 0.02f;
-				translation_z -= (float)cos(angle*radian_conversion) * 0.8f;
+				translation_z -= (float)cos(angle*radian_conversion) * 1.0f;
 				scaling_factor += 0.05;
 		
 				if(ammo_number % 2 == 0) {
@@ -1167,5 +1226,60 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 
 //this draws the bullets fired by the island
 void GameWorld::draw_island_ammo() {
+	int total_islands = islands.size();
+	float weapon_rotation_angle;
+	float weapon_rotation_angle_down = 0.0;
+	float hyp = 0.0;
+	Vertex current_island_ammo_location;
 
+	for(int i = 0; i < total_islands; i++) {
+		if(islands.at(i).doWeaponFire() == true && fire_next_missile == true) {
+			weapon_rotation_angle = islands.at(i).getWeaponRotationAngle();
+			current_island_ammo_location = islands.at(i).getAmmoLocation();
+
+			weapon_rotation_angle = 90 - weapon_rotation_angle;
+
+			hyp = getHypotenuse((current_ship_location.x - current_island_ammo_location.x), (current_ship_location.z - current_island_ammo_location.z));
+			weapon_rotation_angle_down = atan2(hyp, current_island_ammo_location.y)*degree_conversion;
+
+			weapon_translation_x -= (float)sin(weapon_rotation_angle*radian_conversion) * 0.75f;
+			weapon_translation_y -= (float)cos(weapon_rotation_angle_down*radian_conversion) * 0.95f;
+			weapon_translation_z -= (float)cos(weapon_rotation_angle*radian_conversion) * 0.75f;
+			weapon_scaling_factor += 0.05;
+
+			//weapon_rotation_angle_down = 180 - weapon_rotation_angle_down;
+
+			current_island_ammo_location.x += weapon_translation_x;
+			current_island_ammo_location.y += weapon_translation_y;
+			current_island_ammo_location.z += weapon_translation_z;
+
+			islands.at(i).UpdateAmmoLocation(current_island_ammo_location);
+
+			glPushMatrix();
+			{
+				glTranslatef(current_island_ammo_location.x, current_island_ammo_location.y, current_island_ammo_location.z);
+				glRotatef(-weapon_rotation_angle_down, 0.0, 0.0, 1.0);
+				//glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
+				glScalef(1.0 + scaling_factor, 1.0 + scaling_factor, 1.0 + scaling_factor);
+				draw_model(canon_list);
+			}
+			glPopMatrix();
+		}
+	}
+	
+}
+
+void GameWorld::draw_health_bar() {
+	/*
+	glBegin(GL_QUADS);					// Start Drawing Our Quads
+		for( int x = 0; x < 10; x++) {
+			for( int y = 0; y < 2; y++ ) {
+				glVertex3f( health_bar[x][y][0], health_bar[x][y][1], health_bar[x][y][2] );
+				glVertex3f( health_bar[x][y+1][0], health_bar[x][y+1][1], health_bar[x][y+1][2] );
+				glVertex3f( health_bar[x+1][y+1][0], health_bar[x+1][y+1][1], health_bar[x+1][y+1][2] );
+				glVertex3f( health_bar[x+1][y][0], health_bar[x+1][y][1], health_bar[x+1][y][2] );
+			}
+		}
+	glEnd();
+	*/
 }

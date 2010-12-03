@@ -6,7 +6,7 @@ Ship::Ship() {
 Ship::~Ship() {
 }
 
-int Ship::InitializeShip(Vertex location) {
+int Ship::InitializeShip(Vertex& location) {
 	this->health = 100;
 
 	this->location.x = location.x;
@@ -20,7 +20,7 @@ int Ship::InitializeShip(Vertex location) {
 	return 0;
 }
 
-int Ship::UpdateShipLocation(Vertex current_location) {
+int Ship::UpdateShipLocation(Vertex& current_location) {
 	this->location.x = current_location.x;
 	this->location.y = current_location.y;
 	this->location.z = current_location.z;
@@ -28,12 +28,14 @@ int Ship::UpdateShipLocation(Vertex current_location) {
 	return 0;
 }
 
-int Ship::UpdateShip(int current_health, int current_missiles, int current_super_missiles, int current_sniper_bullets) {
+int Ship::UpdateHealth(int& current_health) {
 	this->health = current_health;
 
-	this->player_ammo.missiles = current_missiles;
-	this->player_ammo.super_missilies = current_super_missiles;
-	this->player_ammo.sniper_bullets = current_sniper_bullets;
+	return 0;
+}
+
+int Ship::UpdateScore(int& current_score) {
+	this->score = current_score;
 
 	return 0;
 }
