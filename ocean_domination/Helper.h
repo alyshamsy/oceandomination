@@ -11,15 +11,9 @@ using namespace std;
 
 GLfloat** generate_vector(int rows, int cols);
 void delete_vector(GLfloat** my_vector, int row);
-
-//string** generate_arrays(int rows, int cols);
-//void delete_array(string** my_vector, int row);
-
-GLfloat random_number_generator(int low_bound, int high_bound);
+GLfloat random_number_generator(int low_bound, int high_bound, float seed);
 float getHypotenuse(float a, float b);
-
 float getSmallestValue(vector<float> arr, int& index);
-
 string intToString(int a);
 
 #endif
