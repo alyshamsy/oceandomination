@@ -1,5 +1,5 @@
 # Displays all the images to be used by the game
-19
+25
 red.tga
 dark-gray.tga
 concrete.tga
@@ -19,3 +19,9 @@ mountain.tga
 blue-texture.tga
 bullet-gold.tga
 bullet-head.tga
+health.tga
+missile.tga
+health.tga
+red-color.tga
+green-color.tga
+yellow-color.tga

@@ -6,6 +6,7 @@ using namespace std;
 
 GameWorld current_game;
 int window_width = 1280, window_height = 720;
+//int window_width = 800, window_height = 600;
 
 //displays the text on the screen
 void load_text(string text, string font_type, FTPoint& position, unsigned int fontsize) {
@@ -56,6 +57,12 @@ void init() {
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		//add a texture image for the game
 		//add flashing for the loading sign
+	FTPoint game_name_1(window_width*0.4, window_height*0.75);
+	load_text("Ocean", "../fonts/ALGER.ttf", game_name_1, 72);
+
+	FTPoint game_name_2(window_width*0.33, window_height*0.65);
+	load_text("Domination", "../fonts/ALGER.ttf", game_name_2, 72);
+
 	FTPoint text_position(window_width*0.36, window_height*0.25);
 	load_text("Loading...", "../fonts/CAMBRIA.ttf", text_position, 72);
 	glfwSwapBuffers();
@@ -89,47 +96,13 @@ int main() {
 		//updates the world
 		game_end = current_game.UpdateGameWorld();
 
-		int window_width = 1280, window_height = 720;
-		float aspect_ratio = (float)window_width/window_height;
-
-
-		//single player view
-		glViewport(0,0, window_width, window_height);
-		glScissor(0,0, window_width, window_height);
-		glEnable(GL_SCISSOR_TEST);
-		
-		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-		//set up the camera and the viewport
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
-
-		glMatrixMode(GL_MODELVIEW);
-
-		current_game.draw_world();
-
 		if(game_end != 0) {
 			running = GL_FALSE;
 			break;
 		}
-		/*	
-			//2nd view
-			glViewport(0,0, window_width/4.0f, window_height/4.0f);
-			glScissor(0,0, window_width/4.0f, window_height/4.0f);
-			glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
-			glClear( GL_DEPTH_BUFFER_BIT );
 
-			//set up the camera and the viewport
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
-
-			glMatrixMode(GL_MODELVIEW);
-
-			//transform for second player			
-			current_game.draw_world();
-		*/
+		//sets up the camera for the game
+		current_game.setup_camera();
 
 		// Swap front and back rendering buffers
 		glfwSwapBuffers();
@@ -170,6 +143,5 @@ int main() {
 	//exit the openGL window
 	exit();
 	
-
 	return 0;
 }

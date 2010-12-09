@@ -9,7 +9,7 @@
 
 #define small_island_defence_radius 30.0f
 #define medium_island_defence_radius 45.0f
-#define large_island_defence_radius 60.0f
+#define large_island_defence_radius 75.0f
 
 class Island {
 public:
