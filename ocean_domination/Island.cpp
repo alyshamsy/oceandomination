@@ -21,11 +21,11 @@ int Island::InitializeIsland(Vertex location, char island_type) {
 	} 
 
 	if(island_type == 'L') {
-		this->defence_radius = small_island_defence_radius;
+		this->defence_radius = large_island_defence_radius;
 	} else if(island_type == 'M') {
 		this->defence_radius = medium_island_defence_radius;
 	} else if(island_type == 'S') {
-		this->defence_radius = large_island_defence_radius;
+		this->defence_radius = small_island_defence_radius;
 	} 
 
 	this->location = location;
