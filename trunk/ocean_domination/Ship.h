@@ -29,7 +29,7 @@ public:
 
 	struct Ammo {
 		int missiles;
-		int super_missilies;
+		int super_missiles;
 		int sniper_bullets;
 	} player_ammo;
 

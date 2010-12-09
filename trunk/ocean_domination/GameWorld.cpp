@@ -23,12 +23,6 @@ GameWorld::GameWorld() {
 	z_position = 0.0;
 	rotation_value = 0.0;
 
-	//initialize enemy movements in the world
-	enemy_x_position = 0.0;
-	enemy_y_position = 0.0;
-	enemy_z_position = 0.0;
-	enemy_rotation_value = 0.0;
-
 	total_x_position = 0.0;
 	total_z_position = 0.0;
 	total_rotation_value = 0.0;
@@ -39,10 +33,6 @@ GameWorld::GameWorld() {
 	forward_movement = 0.0;
 
 	weapon_movement_angle = 0.0;
-
-	enemy_rotation = 0.0;
-	enemy_side_movement = 0.0;
-	enemy_forward_movement = 0.0;
 
 	translation_x = 0.0;
 	translation_y = 0.0;
@@ -66,10 +56,11 @@ GameWorld::GameWorld() {
 	ship_collision = 0;
 	ammo_collision = 0;
 	ammo_ship_collision = 0;
+	power_up_collision = 0;
 
 	island_under_attack = 0;
 
-	test = 0;
+	starting_total_islands = 0;
 
 	shot_fired = false;
 	fire_next_missile = false;
@@ -117,12 +108,14 @@ int GameWorld::CreateGameWorld() {
 	x_position = player_ship.getLocation().x;
 	z_position = player_ship.getLocation().z;
 
+	starting_total_islands = islands.size();
+
 	return 0;
 }
 
 int GameWorld::UpdateGameWorld() {
-	Vertex target_location;
 	Vertex next_ship_location = current_ship_location;
+	int location = 0;
 
 	//set the camera mode for different ammo mode
 	if(ammo_mode != 2) {
@@ -174,7 +167,7 @@ int GameWorld::UpdateGameWorld() {
 			ammo_mode = 2;
 			ammo_number = 0;
 		} else if(ammo_mode == 2) {
-			if(player_ship.player_ammo.super_missilies > 0) {
+			if(player_ship.player_ammo.super_missiles > 0) {
 				ammo_mode = 3;
 			} else {
 				ammo_mode = 1;
@@ -191,7 +184,8 @@ int GameWorld::UpdateGameWorld() {
 		missile_start_time = glfwGetTime();
 		shot_fired = true;
 		ammo_number += 1;
-		cout << "shot fired" << endl;
+
+		//reduce the ammo after firing and increase the SB and SM based on models
 	}
 
 	//adjusting rotation and forward and backward movement
@@ -278,6 +272,27 @@ int GameWorld::UpdateGameWorld() {
 		island_weapon_time = glfwGetTime();
 	}
 
+	power_up_collision = detect_power_ups(current_ship_location, location);
+
+	if(power_up_collision) {
+		if(power_ups.at(location).type == 'H') {
+			int ship_health = player_ship.getHealth();
+			
+			if(ship_health > 80)
+				ship_health = 100;
+			else
+				ship_health += 20;
+
+			player_ship.UpdateHealth(ship_health);
+			power_ups.erase(power_ups.begin()+location);
+		} else if(power_ups.at(location).type == 'M') {
+			int missiles = player_ship.player_ammo.missiles;
+			missiles += 3;
+			player_ship.player_ammo.missiles = missiles;
+			power_ups.erase(power_ups.begin()+location);
+		}
+	}
+	
 	if(player_ship.getHealth() == 0 ) {
 		return 1;
 	} else if(islands.size() == 0) {
@@ -310,11 +325,10 @@ void GameWorld::setup_camera() {
 
 	draw_world();
 
-	/*
 	if(ammo_mode == 2) {
 		//2nd view
-		glViewport(0,0, window_width/4.0f, window_height/4.0f);
-		glScissor(0,0, window_width/4.0f, window_height/4.0f);
+		glViewport(50.0, 50.0, window_width/4.0f, window_height/4.0f);
+		glScissor(50.0, 50.0, window_width/4.0f, window_height/4.0f);
 		glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
 		glClear( GL_DEPTH_BUFFER_BIT );
 
@@ -328,7 +342,6 @@ void GameWorld::setup_camera() {
 		//transform for second player			
 		draw_viewport();
 	}
-	*/
 }
 
 //generate the call list from the model and the call list value
@@ -455,34 +468,34 @@ int GameWorld::generate_health_powerup_list() {
 			glBegin(GL_QUADS);
 			{
 				glTexCoord2f(1.0, 1.0); glVertex3f(0.5, 0.5, 0);   //A
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -0.5, 0);  //B
-				glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, -0.5, 0); //C
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, 0.5, 0);  //D
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.0, 0);  //B
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, 0); //C
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.5, 0);  //D
 		
 				glTexCoord2f(1.0, 1.0); glVertex3f(0.5, 0.5, 0);     //A
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);  //F
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, -1.0); //G
-				glTexCoord2f(0.0, 1.0); glVertex3f(0.5, -0.5, 0);    //B
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);  //F
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, -0.5); //G
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.5, 0.0, 0);    //B
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);   //F
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, -1.0);  //G
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, -1.0); //H
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);   //F
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, -0.5);  //G
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, -0.5); //H
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, 0);     //D
-				glTexCoord2f(1.0, 0.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, -0.5, -1.0); //H
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, 0);    //C
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, 0);     //D
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, -0.5); //H
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, 0);    //C
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, -0.5, -1.0); //H
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -0.5, -1.0);  //G
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, 0);     //B
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, 0);    //C
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.0, -0.5); //H
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.0, -0.5);  //G
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, 0);     //B
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, 0);    //C
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);   //F
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);   //F
 				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.5, 0);      //A		
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, 0.5, 0);     //D
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.5, 0);     //D
 			}
 			glEnd();
 		glEndList();
@@ -508,34 +521,34 @@ int GameWorld::generate_missile_powerup_list() {
 			glBegin(GL_QUADS);
 			{
 				glTexCoord2f(1.0, 1.0); glVertex3f(0.5, 0.5, 0);   //A
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -0.5, 0);  //B
-				glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, -0.5, 0); //C
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, 0.5, 0);  //D
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.0, 0);  //B
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, 0); //C
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.5, 0);  //D
 		
 				glTexCoord2f(1.0, 1.0); glVertex3f(0.5, 0.5, 0);     //A
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);  //F
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, -1.0); //G
-				glTexCoord2f(0.0, 1.0); glVertex3f(0.5, -0.5, 0);    //B
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);  //F
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, -0.5); //G
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.5, 0.0, 0);    //B
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);   //F
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, -1.0);  //G
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, -1.0); //H
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);   //F
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, -0.5);  //G
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, -0.5); //H
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, 0);     //D
-				glTexCoord2f(1.0, 0.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, -0.5, -1.0); //H
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, 0);    //C
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, 0);     //D
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, -0.5); //H
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, 0);    //C
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, -0.5, -1.0); //H
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -0.5, -1.0);  //G
-				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, 0);     //B
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, 0);    //C
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.0, -0.5); //H
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.0, -0.5);  //G
+				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.0, 0);     //B
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.0, 0);    //C
 		
-				glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, -1.0);  //E
-				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -1.0);   //F
+				glTexCoord2f(1.0, 1.0); glVertex3f(0.0, 0.5, -0.5);  //E
+				glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);   //F
 				glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.5, 0);      //A		
-				glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, 0.5, 0);     //D
+				glTexCoord2f(0.0, 1.0); glVertex3f(0.0, 0.5, 0);     //D
 			}
 			glEnd();
 		glEndList();
@@ -561,7 +574,6 @@ int GameWorld::load_levels() {
 //handle to read models.txt and load models in parallel
 int GameWorld::load_models() {
 	string ship_model = "enemy.obj";
-	//string enemy_model = "enemy.obj";
 	string sky_model = "sky.obj";
 	string sun_model = "sun.obj";
 	string small_island_model = "small-island.obj";
@@ -574,7 +586,6 @@ int GameWorld::load_models() {
 	string canon_model = "canon.obj";
 
 	ship.LoadModel(ship_model);
-	//enemy.LoadModel(enemy_model);
 	sky.LoadModel(sky_model);
 	sun.LoadModel(sun_model);
 	small_island.LoadModel(small_island_model);
@@ -662,14 +673,11 @@ void GameWorld::create_call_lists() {
 
 //create the water mesh to display water
 void GameWorld::create_water_mesh() {
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);					// Draw Our Mesh In Wireframe Mode
-	
-	// Create Our Mesh
 	for (int x = 0; x < mesh_size; x++) {
 		for (int z = 0; z < mesh_size; z++) {
-			mesh_dimensions[x][z][0] = (float) (mesh_size / 2) - x;				// We Want To Center Our Mesh Around The Origin
-			mesh_dimensions[x][z][1] = (float) 0.0;						// Set The Y Values For All Points To 0
-			mesh_dimensions[x][z][2] = (float) (mesh_size / 2) - z;				// We Want To Center Our Mesh Around The Origin
+			mesh_dimensions[x][z][0] = (float) (mesh_size / 2) - x;
+			mesh_dimensions[x][z][1] = (float) 0.0;
+			mesh_dimensions[x][z][2] = (float) (mesh_size / 2) - z;
 		}
 	}
 }
@@ -730,26 +738,51 @@ void GameWorld::initialize_ship() {
 
 //initialize power ups
 void GameWorld::initialize_power_ups() {
+	vector<int> locations;
 	int high_bound = islands.size() - 1;
 	int value = 0;
+	int location = 0;
+	float seed = 0;
+
+	Collectables current_power_up;
 
 	for(int i = 0; i < 6; i++) {
-		value = (int)random_number_generator(0, high_bound);
-		power_up_locations.push_back(value);
+		value = (int)random_number_generator(0, high_bound, seed);
+		seed = value*2;
+		locations.push_back(value);
 		if(i > 0) {
 			for(int j = 0; j < i; j++) {
-				if(power_up_locations.at(j) == power_up_locations.at(i)) {
-					power_up_locations.at(i) = random_number_generator(1, high_bound);
+				if(locations.at(j) == locations.at(i)) {
+					if(value > high_bound*0.5) {
+						seed *= 2;
+						value = (int)random_number_generator(0, value, seed);
+					} else {
+						seed *= 4;
+						value = (int)random_number_generator(value, high_bound, seed);
+					}
+					locations.at(i) = value;
 					break;
 				}
 			}
 		}
 	}
+
+	for(int i = 0; i < 6; i++) {
+		location = locations.at(i);
+		current_power_up.power_up_locations = islands.at(location).getLocation();
+
+		if(i % 2 == 0)
+			current_power_up.type = 'H';
+		else
+			current_power_up.type = 'M';
+
+		power_ups.push_back(current_power_up);
+	}
 }
 
 //uses a random number generator to update wind factor
 void GameWorld::update_wind_factor() {
-	float random_number = random_number_generator(1, 6);
+	float random_number = random_number_generator(1, 6, 0);
 
 	wind_factor = random_number * 0.25;
 }
@@ -919,8 +952,32 @@ int GameWorld::detect_ammo_ship_collision(Vertex& ship_location) {
 }
 
 //detect collision with the power ups
-int GameWorld::detect_power_ups(Vertex& ship_location) {
-	return 0;
+int GameWorld::detect_power_ups(Vertex& ship_location, int& location) {
+	int collision = 0;
+	float power_up_radius = 0.6f;
+
+	double collision_distance = 0.00000000000001;
+	double distance_squared = 0.0;
+	double radii_squared = 0.0;
+	double overlap = 0.0;
+
+	Vertex power_up_location;
+
+	int number_of_powerups = power_ups.size();
+
+	for(int i = 0; i < number_of_powerups; i++) {
+		power_up_location = power_ups.at(i).power_up_locations; //power_up_locations.at(i);
+
+		radii_squared = ((player_ship.getShipRadius() + power_up_radius) * (player_ship.getShipRadius() + power_up_radius));
+		distance_squared = ((ship_location.x - power_up_location.x) * (ship_location.x - power_up_location.x)) + ((ship_location.z - power_up_location.z) * (ship_location.z - power_up_location.z));
+		overlap = radii_squared - distance_squared;
+		
+		if (collision_distance < overlap ) {
+			collision = 1;
+			location = i;
+		}
+	}
+	return collision;
 }
 
 //reduce the health of the island
@@ -1033,7 +1090,6 @@ void GameWorld::draw_model(GLuint& model_list) {
 
 //draw the entire game world
 void GameWorld::draw_world() {
-	glEnable(GL_TEXTURE);
 	//draw the ship
 	glPushMatrix();
 	{
@@ -1046,13 +1102,14 @@ void GameWorld::draw_world() {
 	{
 		glRotatef(scene_rotation, 0.0, 1.0, 0.0);
 		draw_top_world();
+		
 		glTranslatef(side_movement, 0.0, forward_movement);
 		draw_ammo(shot_fired, ammo_number, rotation_value);
 		draw_bottom_world();
 				
-		if(ammo_collision) {
+		//if(ammo_collision) {
 			//draw_smoke();
-		}
+		//}
 	}
 	glPopMatrix();
 
@@ -1068,25 +1125,46 @@ void GameWorld::draw_world() {
 			glRotatef(17, 1.0, 0.0, 0.0);
 			glTranslatef(-4.2, 0.1, 0.37);
 		}
-		//glScalef(0.25, 0.25, 0.25);
 		draw_health_bar(health_value, 0.25);
 	}
 	glPopMatrix();
-	glDisable(GL_TEXTURE);
 
 	//display frames per second on top right corner
 
 	//display ammo in centre bottom corner
+	FTPoint ammo_text_position(window_width*0.55, window_height*0.05);
+	load_text("Ammo", "../fonts/PAPYRUS.ttf", ammo_text_position, 24);
+
+	FTPoint missile_text_position(window_width*0.62, window_height*0.05);
+	load_text("M:", "../fonts/PAPYRUS.ttf", missile_text_position, 24);
+
+	FTPoint missile_value_position(window_width*0.65, window_height*0.05);
+	string missiles = intToString(player_ship.player_ammo.missiles);
+	load_text(missiles, "../fonts/PAPYRUS.ttf", missile_value_position, 24);
+
+	FTPoint bullet_text_position(window_width*0.70, window_height*0.05);
+	load_text("SB:", "../fonts/PAPYRUS.ttf", bullet_text_position, 24);
+
+	FTPoint bullet_value_position(window_width*0.75, window_height*0.05);
+	string bullets = intToString(player_ship.player_ammo.sniper_bullets);
+	load_text(bullets, "../fonts/PAPYRUS.ttf", bullet_value_position, 24);
+
+	FTPoint super_missile_text_position(window_width*0.80, window_height*0.05);
+	load_text("SM:", "../fonts/PAPYRUS.ttf", super_missile_text_position, 24);
+
+	FTPoint super_missile_value_position(window_width*0.85, window_height*0.05);
+	string super_missiles = intToString(player_ship.player_ammo.super_missiles);
+	load_text(super_missiles, "../fonts/PAPYRUS.ttf", super_missile_value_position, 24);
 
 	//display text when power up picked up centre mid screen
 
 	//display score text
-	FTPoint score_text_position(window_width*0.80, window_height*0.03);
-	load_text("Score", "../fonts/PAPYRUS.ttf", score_text_position, 34);
+	FTPoint score_text_position(window_width*0.88, window_height*0.05);
+	load_text("Score", "../fonts/PAPYRUS.ttf", score_text_position, 24);
 
-	FTPoint score_value_position(window_width*0.92, window_height*0.03);
+	FTPoint score_value_position(window_width*0.96, window_height*0.05);
 	string score = intToString(player_ship.getCurrentScore());
-	load_text(score, "../fonts/PAPYRUS.ttf", score_value_position, 34);
+	load_text(score, "../fonts/PAPYRUS.ttf", score_value_position, 24);
 }
 
 //draw the sky, sun and clouds
@@ -1166,11 +1244,18 @@ void GameWorld::draw_bottom_world() {
 		draw_island_ammo();
 	}
 	glPopMatrix();
+
+	//draw powerups
+	glPushMatrix();
+	{
+		draw_powerups();
+	}
+	glPopMatrix();
 }
 
 //draws the viewport
 void GameWorld::draw_viewport() {
-
+	
 }
 
 //draw the water and generate the display list if none exists
@@ -1505,5 +1590,25 @@ void GameWorld::draw_health_bar(int& health, float scale) {
 
 //draws the power ups
 void GameWorld::draw_powerups() {
+	int number_of_powerups = power_ups.size();
+	Vertex location;
 
+	for(int i = 0; i < number_of_powerups; i++) {
+		location = power_ups.at(i).power_up_locations;
+		if(power_ups.at(i).type == 'H') {
+			glPushMatrix();
+			{	
+				glTranslatef(location.x, location.y + 5, location.z);
+				draw_model(health_powerup_list);
+			}
+			glPopMatrix();
+		} else if(power_ups.at(i).type == 'M') {
+			glPushMatrix();
+			{	
+				glTranslatef(location.x, location.y + 5, location.z);
+				draw_model(missile_powerup_list);
+			}
+			glPopMatrix();
+		}
+	}
 }

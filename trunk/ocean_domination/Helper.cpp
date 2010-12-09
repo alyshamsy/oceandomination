@@ -17,11 +17,14 @@ void delete_vector(GLfloat** my_vector, int row) {
   delete [] my_vector;
 }
 
-GLfloat random_number_generator(int low_bound, int high_bound) {
+GLfloat random_number_generator(int low_bound, int high_bound, float seed) {
 	GLfloat random_number = 0.0;
 	double time = glfwGetTime();
 
-	srand(time);
+	if(seed == 0)
+		seed = time;
+
+	srand(seed);
 	random_number = (float)((rand() % (high_bound - low_bound + 1)) + low_bound);
 
 	return random_number;

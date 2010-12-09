@@ -54,19 +54,19 @@ private:
 
 	//movement in the world
 	GLfloat x_position, y_position, z_position, rotation_value;
-	GLfloat enemy_x_position, enemy_y_position, enemy_z_position, enemy_rotation_value;
 	GLfloat total_x_position, total_z_position, total_rotation_value;
 
 	//variables to draw movement in the world
-	GLfloat scene_rotation, enemy_rotation;
-	GLfloat side_movement, enemy_side_movement;
-	GLfloat forward_movement, enemy_forward_movement;
+	GLfloat scene_rotation, side_movement, forward_movement;
 
 	//variables to detect collision
-	int ship_collision, ammo_collision, ammo_ship_collision;
+	int ship_collision, ammo_collision, ammo_ship_collision, power_up_collision;
 
 	//stores which island is currently under attack
 	int island_under_attack;
+
+	//starting number of islands
+	int starting_total_islands;
 
 	//stores the current location of the ship
 	Vertex current_ship_location;
@@ -99,7 +99,6 @@ private:
 	//Island AI variables
 	float weapon_movement_angle;
 
-	int test;
 	//Levels to be Loaded
 	LevelLoader game_levels;
 
@@ -161,7 +160,12 @@ private:
 	vector<Island> quad_4_islands;
 
 	//array of power ups
-	vector<int> power_up_locations;
+	struct Collectables {
+		Vertex power_up_locations;
+		char type;
+	};
+
+	vector<Collectables> power_ups;
 
 	//List of ships to be used
 	Ship player_ship;
@@ -191,7 +195,7 @@ private:
 	int detect_ship_collision(Vertex& ship_location);
 	int detect_ammo_collision(Vertex& ammo_location, int& island_under_attack);
 	int detect_ammo_ship_collision(Vertex& ship_location);
-	int detect_power_ups(Vertex& ship_location);
+	int detect_power_ups(Vertex& ship_location, int& location);
 	void reduce_island_health(int& island_number);
 	void reduce_ship_health();
 	void update_score(int& island_number);
