@@ -31,6 +31,7 @@ GameWorld::GameWorld() {
 	scene_rotation = 0.0; 
 	side_movement = 0.0;
 	forward_movement = 0.0;
+	ship_bounce = 0.0;
 
 	weapon_movement_angle = 0.0;
 
@@ -125,6 +126,7 @@ int GameWorld::CreateGameWorld() {
 int GameWorld::UpdateGameWorld() {
 	Vertex next_ship_location = current_ship_location;
 	int location = 0;
+	float bounce_frequency = 0.0;
 
 	//set the camera mode for different ammo mode
 	if(ammo_mode != 2) {
@@ -133,7 +135,7 @@ int GameWorld::UpdateGameWorld() {
 		glRotatef(17, 1.0, 0.0, 0.0);
 	} else if(ammo_mode == 2) {
 		glLoadIdentity();
-		glTranslatef(0.0, -2.5, -3.7);
+		glTranslatef(0.0, -2.5, -3.5);
 		glRotatef(-17, 1.0, 0.0, 0.0);
 	}
 
@@ -222,11 +224,11 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0) {
-		player_ship.player_ammo.sniper_bullets += 1;
+		player_ship.player_ammo.sniper_bullets += 2;
 		sniper_bullet_collected = true;
 		sniper_collected_time = glfwGetTime();
 	} else if((starting_total_islands - islands.size()) % 5 == 0 && (starting_total_islands - islands.size()) != 0) {
-		player_ship.player_ammo.super_missiles += 1;
+		player_ship.player_ammo.super_missiles += 2;
 		super_missile_collected = true;
 		super_missile_collected_time = glfwGetTime();
 	}
@@ -235,6 +237,14 @@ int GameWorld::UpdateGameWorld() {
 	scene_rotation = 360.0 - rotation_value;
 	side_movement = -current_ship_location.x;
 	forward_movement = -current_ship_location.z;
+
+	//rocks the boat up and down as the waves move
+	bounce_frequency = -4.5f;
+	if(ammo_mode == 2) {
+		ship_bounce = 0.1 * sin(current_time + bounce_frequency*0.0) * sin(current_time + bounce_frequency*0.0);
+	} else {
+		ship_bounce = wind_factor * sin(current_time + bounce_frequency*30.0) * sin(current_time + bounce_frequency*30.0);
+	}
 
 	//update the current ship location
 	player_ship.UpdateShipLocation(current_ship_location);
@@ -374,8 +384,8 @@ void GameWorld::setup_camera() {
 
 	if(ammo_mode == 2) {
 		//2nd view
-		glViewport(50.0, 50.0, window_width/4.0f, window_height/4.0f);
-		glScissor(50.0, 50.0, window_width/4.0f, window_height/4.0f);
+		glViewport(75.0, 75.0, window_width/4.0f, window_height/4.0f);
+		glScissor(75.0, 75.0, window_width/4.0f, window_height/4.0f);
 		glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
 		glClear( GL_DEPTH_BUFFER_BIT );
 
@@ -1134,7 +1144,7 @@ void GameWorld::update_score(int& island_number) {
 void GameWorld::update_lighting() {
 	current_time_light = (int)(glfwGetTime() - start_time);
 
-	if( (current_time_light % 5 == 0) && ( (current_time_light - prev_time_light) > 1) ) {
+	if( (current_time_light % 50 == 0) && ( (current_time_light - prev_time_light) > 1) ) {
 		float ambient_light_value = ambient_light[0];
 		float diffuse_light_value = diffusive_light[0];
 		float specular_light_value = specular_light[0];
@@ -1187,6 +1197,7 @@ void GameWorld::draw_world() {
 	//draw the ship
 	glPushMatrix();
 	{
+		glTranslatef(0.0, ship_bounce, 0.0);
 		draw_ship();
 	}
 	glPopMatrix();
@@ -1217,7 +1228,7 @@ void GameWorld::draw_world() {
 			glTranslatef(-2.4, -1.5, 4.9);
 		} else {
 			glRotatef(17, 1.0, 0.0, 0.0);
-			glTranslatef(-4.2, 0.1, 0.37);
+			glTranslatef(-4.0, 0.2, 0.20);
 		}
 		draw_health_bar(health_value, 0.25);
 	}

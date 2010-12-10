@@ -58,6 +58,7 @@ private:
 
 	//variables to draw movement in the world
 	GLfloat scene_rotation, side_movement, forward_movement;
+	GLfloat ship_bounce;
 
 	//variables to detect collision
 	int ship_collision, ammo_collision, ammo_ship_collision, power_up_collision;
