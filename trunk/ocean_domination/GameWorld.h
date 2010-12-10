@@ -96,8 +96,20 @@ private:
 	//checks to see if the ship has been hit
 	bool ship_hit;
 
+	//checks to see if the sniper bullets were collected or if super missile was collected
+	bool sniper_bullet_collected;
+	float sniper_collected_time;
+
+	bool super_missile_collected;
+	float super_missile_collected_time;
+
 	//Island AI variables
 	float weapon_movement_angle;
+
+	//boolean to keep track of whether to reduce light or increase light levels
+	bool light_reduce;
+	int prev_time_light;
+	int current_time_light;
 
 	//Levels to be Loaded
 	LevelLoader game_levels;
@@ -199,6 +211,7 @@ private:
 	void reduce_island_health(int& island_number);
 	void reduce_ship_health();
 	void update_score(int& island_number);
+	void update_lighting();
 
 	//draw functionality
 	void draw_model(GLuint& model_list);
@@ -210,6 +223,7 @@ private:
 	void draw_ammo(bool shot_fired, int ammo_number, float angle);
 	void draw_island_ammo();
 	void draw_health_bar(int& health, float scale);
+	void draw_island_health(float scale);
 	void draw_powerups();
 };
 

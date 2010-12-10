@@ -1,9 +1,9 @@
 #include "GameWorld.h"
 
 //Lighting values
-GLfloat ambient_light[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+GLfloat ambient_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 GLfloat diffusive_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-GLfloat specular_light[] = { 1.0, 1.0, 1.0, 1.0 };
+GLfloat specular_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 GLfloat light_position[] = { 12.0f, 8.0f, -40.0f, 1.0f };
 
 GameWorld::GameWorld() {
@@ -65,6 +65,15 @@ GameWorld::GameWorld() {
 	shot_fired = false;
 	fire_next_missile = false;
 	island_hit = false;
+	sniper_bullet_collected = false;
+	super_missile_collected = false;
+
+	sniper_collected_time = 0.0;
+	super_missile_collected_time = 0.0;
+
+	light_reduce = true;
+	prev_time_light = 0;
+	current_time_light = 0;
 }
 
 GameWorld::~GameWorld() {
@@ -164,7 +173,13 @@ int GameWorld::UpdateGameWorld() {
 		button_timeout = glfwGetTime();
 
 		if(ammo_mode == 1) {
-			ammo_mode = 2;
+			if(player_ship.player_ammo.sniper_bullets > 0) {
+				ammo_mode = 2;
+			} else if(player_ship.player_ammo.super_missiles > 0) {
+				ammo_mode = 3;
+			} else {
+				ammo_mode = 1;
+			}
 			ammo_number = 0;
 		} else if(ammo_mode == 2) {
 			if(player_ship.player_ammo.super_missiles > 0) {
@@ -183,9 +198,37 @@ int GameWorld::UpdateGameWorld() {
 	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && shot_fired == false) {
 		missile_start_time = glfwGetTime();
 		shot_fired = true;
-		ammo_number += 1;
 
 		//reduce the ammo after firing and increase the SB and SM based on models
+		if(ammo_mode == 1) {
+			ammo_number = player_ship.player_ammo.missiles;
+			if(ammo_number > 0) {
+				ammo_number--;
+				player_ship.player_ammo.missiles = ammo_number;
+			}
+		} else if(ammo_mode == 2) {
+			ammo_number = player_ship.player_ammo.sniper_bullets;
+			if(ammo_number > 0) {
+				ammo_number--;
+				player_ship.player_ammo.sniper_bullets = ammo_number;
+			}
+		} else if(ammo_mode == 3) {
+			ammo_number = player_ship.player_ammo.super_missiles;
+			if(ammo_number > 0) {
+				ammo_number--;
+				player_ship.player_ammo.super_missiles = ammo_number;
+			}
+		}
+	}
+
+	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0) {
+		player_ship.player_ammo.sniper_bullets += 1;
+		sniper_bullet_collected = true;
+		sniper_collected_time = glfwGetTime();
+	} else if((starting_total_islands - islands.size()) % 5 == 0 && (starting_total_islands - islands.size()) != 0) {
+		player_ship.player_ammo.super_missiles += 1;
+		super_missile_collected = true;
+		super_missile_collected_time = glfwGetTime();
 	}
 
 	//adjusting rotation and forward and backward movement
@@ -292,6 +335,10 @@ int GameWorld::UpdateGameWorld() {
 			power_ups.erase(power_ups.begin()+location);
 		}
 	}
+
+	
+	//dynamic lighting
+	update_lighting();
 	
 	if(player_ship.getHealth() == 0 ) {
 		return 1;
@@ -1083,6 +1130,53 @@ void GameWorld::update_score(int& island_number) {
 	}
 }
 
+//updates the lighting values
+void GameWorld::update_lighting() {
+	current_time_light = (int)(glfwGetTime() - start_time);
+
+	if( (current_time_light % 5 == 0) && ( (current_time_light - prev_time_light) > 1) ) {
+		float ambient_light_value = ambient_light[0];
+		float diffuse_light_value = diffusive_light[0];
+		float specular_light_value = specular_light[0];
+
+		if(ambient_light_value <= 0.3) {
+			light_reduce = false;
+		} else if(ambient_light_value == 1.0) {
+			light_reduce = true;
+		}
+
+		if(light_reduce == false) {
+			ambient_light_value += 0.1f;
+			diffuse_light_value += 0.1f;
+			specular_light_value += 0.1f;
+		} else {
+			ambient_light_value -= 0.1f;
+			diffuse_light_value -= 0.1f;
+			specular_light_value -= 0.1f;
+		}
+
+		ambient_light[0] = ambient_light_value;
+		ambient_light[1] = ambient_light_value;
+		ambient_light[2] = ambient_light_value;
+
+		diffusive_light[0] = diffuse_light_value;
+		diffusive_light[1] = diffuse_light_value;
+		diffusive_light[2] = diffuse_light_value;
+
+		specular_light[0] = specular_light_value;
+		specular_light[1] = specular_light_value;
+		specular_light[2] = specular_light_value;
+	}
+
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffusive_light);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular_light);
+
+	if(current_time_light - prev_time_light > 1) {
+		prev_time_light = current_time_light;
+	}
+}
+
 //draw the models by calling the display list
 void GameWorld::draw_model(GLuint& model_list) {
 	glCallList(model_list);
@@ -1157,6 +1251,15 @@ void GameWorld::draw_world() {
 	load_text(super_missiles, "../fonts/PAPYRUS.ttf", super_missile_value_position, 24);
 
 	//display text when power up picked up centre mid screen
+	if(sniper_bullet_collected && glfwGetTime() - sniper_collected_time < 2.0) {
+		FTPoint sniper_collected_text_position(window_width*0.3, window_height*0.5);
+		load_text("Sniper Bullet Collected", "../fonts/ITCKRIST.ttf", sniper_collected_text_position, 34);
+	}
+
+	if(super_missile_collected && glfwGetTime() - super_missile_collected_time < 2.0) {
+		FTPoint super_missile_collected_text_position(window_width*0.30, window_height*0.5);
+		load_text("Super Missile Collected", "../fonts/ITCKRIST.ttf", super_missile_collected_text_position, 34);
+	}
 
 	//display score text
 	FTPoint score_text_position(window_width*0.88, window_height*0.05);
@@ -1234,7 +1337,7 @@ void GameWorld::draw_bottom_world() {
 	glPushMatrix();
 	{
 		draw_islands();
-		//draw_island_health();
+		draw_island_health(0.5);
 	}
 	glPopMatrix();
 
@@ -1382,9 +1485,14 @@ void GameWorld::draw_ship() {
 
 //draws the missile on the screen
 void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
+	int current_missile_numbers = player_ship.player_ammo.missiles;
+	int current_sniper_numbers =  player_ship.player_ammo.sniper_bullets;
+	int current_super_missile_numbers =  player_ship.player_ammo.super_missiles;
+
 	current_ammo_location = player_ship.getLocation();
+	
 	if(!island_hit) {
-		if(ammo_mode == 1 && shot_fired == true) {	
+		if(ammo_mode == 1 && shot_fired == true && current_missile_numbers > 0) {	
 			translation_x -= (float)sin(angle*radian_conversion) * 1.0f;
 			translation_y += 0.02f;
 			translation_z -= (float)cos(angle*radian_conversion) * 1.0f;
@@ -1417,7 +1525,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 				}
 				glPopMatrix();
 			}
-		} else if(ammo_mode == 2  && shot_fired == true) {
+		} else if(ammo_mode == 2  && shot_fired == true && current_sniper_numbers > 0) {
 			translation_x -= (float)sin(angle*radian_conversion) * 3.0f;
 			translation_y += 0.0f;
 			translation_z -= (float)cos(angle*radian_conversion) * 3.0f;
@@ -1435,7 +1543,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 				draw_model(bullet_list);
 			}
 			glPopMatrix();
-		} else if(ammo_mode == 3  && shot_fired == true) {	
+		} else if(ammo_mode == 3  && shot_fired == true && current_super_missile_numbers > 0) {	
 			translation_x -= (float)sin(angle*radian_conversion) * 1.5f;
 			translation_y += 0.02f;
 			translation_z -= (float)cos(angle*radian_conversion) * 1.5f;
@@ -1586,6 +1694,98 @@ void GameWorld::draw_health_bar(int& health, float scale) {
 	glEnd();
 
 	//glPolygonMode(GL_FRONT, GL_FILL);
+}
+
+void GameWorld::draw_island_health(float scale) {
+	float health_value;
+	string red_color = "red-color.tga", yellow_color = "yellow-color.tga", green_color = "green-color.tga";
+	string health_icon = "health.tga";
+	Vertex health_bar_translation;
+
+	int red_color_index = 0, yellow_color_index = 0, green_color_index = 0;
+	int health_icon_index = 0;
+	int texture_index = 0;
+	int total_islands = islands.size();
+	
+	for(int i = 0; i < total_islands; i++) {
+		if(islands.at(i).isUnderAttack() == true) {
+			health_value = ((float)islands.at(i).getHealth()/10)*(scale);
+			health_bar_translation = islands.at(i).getLocation();
+
+			glTranslatef(health_bar_translation.x, 10.0, health_bar_translation.z);
+
+			glPushMatrix();
+			{
+				glPolygonMode(GL_FRONT, GL_FILL);
+				while(health_icon.compare(texture_file_names[texture_index]) != 0) {
+						texture_index++;
+				}
+				health_icon_index = texture_index;
+				glBindTexture(GL_TEXTURE_2D, texture_images[health_icon_index]);
+				glBegin(GL_QUADS);	
+					glTexCoord2f(0.0, 1.0); glVertex3f(-1.0*scale, 0.5*scale, 0.0);
+					glTexCoord2f(0.0, 0.0); glVertex3f(-1.0*scale, 0.0, 0.0);
+					glTexCoord2f(1.0, 0.0); glVertex3f(-0.5*scale, 0.0, 0.0);
+					glTexCoord2f(1.0, 1.0); glVertex3f(-0.5*scale, 0.5*scale, 0.0);
+				glEnd();
+
+				glPolygonMode(GL_FRONT, GL_LINE);
+	
+				if(health_value <= 2*scale) {
+					//glColor3f(1.0, 0.0, 0.0);
+					while(red_color.compare(texture_file_names[texture_index]) != 0) {
+						texture_index++;
+					}
+					red_color_index = texture_index;
+					glBindTexture(GL_TEXTURE_2D, texture_images[red_color_index]);
+				} else if(health_value <= 4*scale) {
+					//glColor3f(1.0, 1.0, 0.0);
+					while(yellow_color.compare(texture_file_names[texture_index]) != 0) {
+						texture_index++;
+					}
+					yellow_color_index = texture_index;
+					glBindTexture(GL_TEXTURE_2D, texture_images[yellow_color_index]);
+				} else {
+					//glColor3f(0.0, 1.0, 0.0);
+					while(green_color.compare(texture_file_names[texture_index]) != 0) {
+						texture_index++;
+					}
+					green_color_index = texture_index;
+					glBindTexture(GL_TEXTURE_2D, texture_images[green_color_index]);
+				}
+
+				glBegin(GL_QUADS);	
+					glTexCoord2f(0.0, 1.0); glVertex3f(0.0 - 0.02, 0.5*scale + 0.02, 0.0);
+					glTexCoord2f(0.0, 0.0); glVertex3f(0.0 - 0.02, 0.0 - 0.02, 0.0);
+					glTexCoord2f(1.0, 0.0); glVertex3f(10.0*scale + 0.02, 0.0 - 0.02, 0.0);
+					glTexCoord2f(1.0, 1.0); glVertex3f(10.0*scale + 0.02, 0.5*scale + 0.02, 0.0);
+				glEnd();
+
+				glPolygonMode(GL_FRONT, GL_FILL);
+
+				if(health_value <= 2*scale) {
+					//glColor3f(1.0, 0.0, 0.0);
+					glBindTexture(GL_TEXTURE_2D, texture_images[red_color_index]);
+				} else if(health_value <= 4*scale) {
+					//glColor3f(1.0, 1.0, 0.0);
+					glBindTexture(GL_TEXTURE_2D, texture_images[yellow_color_index]);
+				} else {
+					//glColor3f(0.0, 1.0, 0.0);
+					glBindTexture(GL_TEXTURE_2D, texture_images[green_color_index]);
+				}
+
+				glBegin(GL_QUADS);
+					for(float i = 0.0; i < (health_value); i +=(0.5*scale)) {
+						glTexCoord2f(0.0, 1.0); glVertex3f(i, 0.5*scale, 0.0);
+						glTexCoord2f(0.0, 0.0); glVertex3f(i, 0.0, 0.0);
+						glTexCoord2f(1.0, 0.0); glVertex3f(i+(0.5*scale), 0.0, 0.0);
+						glTexCoord2f(1.0, 1.0); glVertex3f(i+(0.5*scale), 0.5*scale, 0.0);
+					}
+				glEnd();
+			}
+			glPopMatrix();
+		}
+	}
 }
 
 //draws the power ups
