@@ -13,8 +13,8 @@ int Ship::InitializeShip(Vertex& location) {
 	this->location.y = location.y;
 	this->location.z = location.z;
 
-	this->player_ammo.missiles = 15;
-	this->player_ammo.super_missiles = 1;
+	this->player_ammo.missiles = 25;
+	this->player_ammo.super_missiles = 0;
 	this->player_ammo.sniper_bullets = 5;
 
 	return 0;
