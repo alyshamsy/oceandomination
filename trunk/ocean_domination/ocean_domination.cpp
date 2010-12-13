@@ -19,7 +19,7 @@ void init() {
 	}
 	
 	// Open an OpenGL window in Full Screen mode
-	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
+	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_FULLSCREEN ) ) {
 		glfwTerminate();
 		exit( EXIT_FAILURE );
 	}

@@ -1441,7 +1441,7 @@ void GameWorld::update_smoke() {
 		Smoke[i].Direction = Smoke[i].Direction + ((((((int)(0.5 - 0.1 + 0.1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1);
 
 		
-		if (Smoke[i].Ypos > 5) {
+		if (Smoke[i].Ypos > 10) {
 			Smoke[i].Xpos = 0;
 			Smoke[i].Ypos = 0;
 			Smoke[i].Zpos = 0;
