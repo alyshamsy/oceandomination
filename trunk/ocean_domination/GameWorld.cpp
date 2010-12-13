@@ -282,11 +282,11 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	//increase sniper bullets by 2 when killing 2 islands and 2 super missiles when killing 5 islands
-	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0) {
+	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0 && sniper_bullet_collected == false) {
 		player_ship.player_ammo.sniper_bullets += 2;
 		sniper_bullet_collected = true;
 		sniper_collected_time = glfwGetTime();
-	} else if((starting_total_islands - islands.size()) % 5 == 0 && (starting_total_islands - islands.size()) != 0) {
+	} else if((starting_total_islands - islands.size()) % 5 == 0 && (starting_total_islands - islands.size()) != 0 && super_missile_collected == false) {
 		player_ship.player_ammo.super_missiles += 2;
 		super_missile_collected = true;
 		super_missile_collected_time = glfwGetTime();
@@ -315,12 +315,18 @@ int GameWorld::UpdateGameWorld() {
 			islands.at(island_under_attack).UpdateUnderAttack(true);
 			if(ammo_mode == 1 && glfwGetTime() - missile_start_time >= 0.25) {
 				reduce_island_health(island_under_attack);
+				sniper_bullet_collected = false;
+				super_missile_collected = false;
 				island_hit = true;
 			} else if(ammo_mode == 2 && glfwGetTime() - missile_start_time >= 0.25) {
 				reduce_island_health(island_under_attack);
+				sniper_bullet_collected = false;
+				super_missile_collected = false;
 				island_hit = true;
 			} else if(ammo_mode == 3 && glfwGetTime() - missile_start_time >= 0.5) {
 				reduce_island_health(island_under_attack);
+				sniper_bullet_collected = false;
+				super_missile_collected = false;
 				island_hit = true;
 			}
 		}
