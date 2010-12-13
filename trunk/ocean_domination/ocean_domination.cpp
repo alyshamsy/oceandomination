@@ -8,13 +8,6 @@ GameWorld current_game;
 int window_width = 1280, window_height = 720;
 //int window_width = 800, window_height = 600;
 
-//displays the text on the screen
-void load_text(string text, string font_type, FTPoint& position, unsigned int fontsize) {
-	FTGLPixmapFont font(font_type.c_str());
-	font.FaceSize(fontsize);
-	font.Render(text.c_str(), -1, position);
-}
-
 //initialize the game
 void init() {
 	
@@ -58,13 +51,13 @@ void init() {
 		//add a texture image for the game
 		//add flashing for the loading sign
 	FTPoint game_name_1(window_width*0.4, window_height*0.75);
-	load_text("Ocean", "../fonts/ALGER.ttf", game_name_1, 72);
+	current_game.load_text("Ocean", game_name_1, 72);
 
 	FTPoint game_name_2(window_width*0.33, window_height*0.65);
-	load_text("Domination", "../fonts/ALGER.ttf", game_name_2, 72);
+	current_game.load_text("Domination", game_name_2, 72);
 
 	FTPoint text_position(window_width*0.36, window_height*0.25);
-	load_text("Loading...", "../fonts/CAMBRIA.ttf", text_position, 72);
+	current_game.load_text("Loading...", text_position, 72);
 	glfwSwapBuffers();
 
 	current_game.InitializeGameWorld();
@@ -117,23 +110,24 @@ int main() {
 			//add a texture image for the game
 			//add flashing for the loading sign
 		if(game_end == 0) {
-			FTPoint text_position(window_width*0.1, window_height*0.5);
-			load_text("Thank you for Playing Ocean Domination", "../fonts/ALGER.ttf", text_position, 48);
+			
+			FTPoint text_position(window_width*0.2, window_height*0.5);
+			current_game.load_text("Thank you for Playing Ocean Domination", text_position, 48);
 		} else {
 			FTPoint text_position(window_width*0.35, window_height*0.75);
-			load_text("Game Over", "../fonts/ALGER.ttf", text_position, 72);
+			current_game.load_text("Game Over", text_position, 72);
 
 			if(game_end == 1) {
 				FTPoint text_position(window_width*0.38, window_height*0.35);
-				load_text("You Lose!", "../fonts/ALGER.ttf", text_position, 72);
+				current_game.load_text("You Lose!", text_position, 72);
 			} else if(game_end == 2) {
 				FTPoint text_position(window_width*0.39, window_height*0.35);
-				load_text("You Win!", "../fonts/ALGER.ttf", text_position, 72);
+				current_game.load_text("You Win!", text_position, 72);
 			}
 		}
 
 		FTPoint exit_text_position(window_width*0.45, window_height*0.1);
-		load_text("Press Enter to Exit", "../fonts/ALGER.ttf", exit_text_position, 20);
+		current_game.load_text("Press Enter to Exit", exit_text_position, 20);
 
 		glfwSwapBuffers();
 

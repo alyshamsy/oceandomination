@@ -6,11 +6,40 @@ GLfloat diffusive_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 GLfloat specular_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 GLfloat light_position[] = { 12.0f, 8.0f, -40.0f, 1.0f };
 
-GameWorld::GameWorld() {
+const size_t fps_sample_size = 100;
+const int ParticleCount = 500;
+const int SMParticleCount = 25;
+
+typedef struct
+{
+	double Xpos;
+	double Ypos;
+	double Zpos;
+	double Xmov;
+	double Zmov;
+	double Red;
+	double Green;
+	double Blue;
+	double Direction;
+	double Acceleration;
+	double Deceleration;
+	double Scalez;
+	bool Visible;
+}Particles;
+
+Particles Smoke[ParticleCount];
+Particles Explosion[ParticleCount];
+Particles missile_particle[SMParticleCount];
+Particles Rain[ParticleCount];
+
+GameWorld::GameWorld():font("../fonts/CAMBRIA.ttf") {
 	//game window dimensions
 	window_width = 1280, window_height = 720;
 	aspect_ratio = (float)window_width/window_height;
 
+	prev_fps_time = 0, max_time_step = .2;
+	fps_count = 0, fps = 0;
+	
 	//set the starting wind factor in the game (moves the waves)
 	wind_factor = 0.5;
 	
@@ -75,6 +104,10 @@ GameWorld::GameWorld() {
 	light_reduce = true;
 	prev_time_light = 0;
 	current_time_light = 0;
+
+	movement = 0;
+
+	sniper_start_time = 0.0;
 }
 
 GameWorld::~GameWorld() {
@@ -86,6 +119,7 @@ GameWorld::~GameWorld() {
 	texture_file_names = NULL;
 }
 
+//initializes the variables in the game world
 int GameWorld::InitializeGameWorld() {
 	//create shader programs
 	water_shader_program = glCreateProgram();
@@ -106,9 +140,17 @@ int GameWorld::InitializeGameWorld() {
 	//create water mesh
 	create_water_mesh();
 
+	//create particles
+	create_cloud_mesh();
+	create_smoke();
+	create_explosion();
+	create_missile_particles();
+	create_rain();
+
 	return 0;
 }
 
+//creates the game world
 int GameWorld::CreateGameWorld() {
 	initialize_islands();
 	initialize_ship();
@@ -123,10 +165,16 @@ int GameWorld::CreateGameWorld() {
 	return 0;
 }
 
+//updates the game world and detects collision
 int GameWorld::UpdateGameWorld() {
 	Vertex next_ship_location = current_ship_location;
 	int location = 0;
 	float bounce_frequency = 0.0;
+
+	float time = glfwGetTime(), dtime = min(time - prev_fps_time, max_time_step);
+    prev_fps_time = time;
+
+	calculate_fps(dtime);
 
 	//set the camera mode for different ammo mode
 	if(ammo_mode != 2) {
@@ -151,6 +199,11 @@ int GameWorld::UpdateGameWorld() {
 		next_ship_location.z += (float)cos(rotation_value*radian_conversion) * 0.2f;
 	}
 	
+	if(next_ship_location.x != 0 || next_ship_location.z != 0) {
+		movement = 1;
+	} else {
+		movement = 0;
+	}
 
 	ship_collision = detect_ship_collision(next_ship_location);
 
@@ -170,7 +223,11 @@ int GameWorld::UpdateGameWorld() {
 	if(glfwGetKey(GLFW_KEY_LEFT) == GLFW_PRESS) {
 		rotation_value += 0.5f;
 	}
+
+	//update the current ship location
+	player_ship.UpdateShipLocation(current_ship_location);
 	
+	//switch the firing mode if the right button is pressed
 	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS && shot_fired == false && glfwGetTime() - button_timeout > 0.5) {
 		button_timeout = glfwGetTime();
 
@@ -209,6 +266,7 @@ int GameWorld::UpdateGameWorld() {
 				player_ship.player_ammo.missiles = ammo_number;
 			}
 		} else if(ammo_mode == 2) {
+			sniper_start_time = glfwGetTime();
 			ammo_number = player_ship.player_ammo.sniper_bullets;
 			if(ammo_number > 0) {
 				ammo_number--;
@@ -223,6 +281,7 @@ int GameWorld::UpdateGameWorld() {
 		}
 	}
 
+	//increase sniper bullets by 2 when killing 2 islands and 2 super missiles when killing 5 islands
 	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0) {
 		player_ship.player_ammo.sniper_bullets += 2;
 		sniper_bullet_collected = true;
@@ -245,9 +304,6 @@ int GameWorld::UpdateGameWorld() {
 	} else {
 		ship_bounce = wind_factor * sin(current_time + bounce_frequency*30.0) * sin(current_time + bounce_frequency*30.0);
 	}
-
-	//update the current ship location
-	player_ship.UpdateShipLocation(current_ship_location);
 
 	//detect if there is ammo collision
 	ammo_collision = detect_ammo_collision(current_ammo_location, island_under_attack);
@@ -279,6 +335,7 @@ int GameWorld::UpdateGameWorld() {
 			scaling_factor = 0.0;
 		} else if(ammo_mode == 2 && glfwGetTime() - missile_start_time >= 1.0) {
 			missile_start_time = glfwGetTime();
+			sniper_start_time = 0.0;
 			shot_fired = false;
 			island_hit = false;
 			translation_x = 0.0;
@@ -298,6 +355,7 @@ int GameWorld::UpdateGameWorld() {
 
 	perform_island_AI(current_ship_location);
 
+	//check if the island ammo has hit the ship
 	ammo_ship_collision = detect_ammo_ship_collision(current_ship_location);
 	
 	if(fire_next_missile == true) {
@@ -324,7 +382,8 @@ int GameWorld::UpdateGameWorld() {
 		
 		island_weapon_time = glfwGetTime();
 	}
-
+	
+	//detect if the power up was picked up
 	power_up_collision = detect_power_ups(current_ship_location, location);
 
 	if(power_up_collision) {
@@ -349,6 +408,12 @@ int GameWorld::UpdateGameWorld() {
 	
 	//dynamic lighting
 	update_lighting();
+
+	//update particles
+	update_smoke();
+	update_explosion();
+	update_missile_particles();
+	update_rain();
 	
 	if(player_ship.getHealth() == 0 ) {
 		return 1;
@@ -382,7 +447,7 @@ void GameWorld::setup_camera() {
 
 	draw_world();
 
-	if(ammo_mode == 2) {
+	if(ammo_mode == 2 && shot_fired == true && player_ship.player_ammo.sniper_bullets > 0) {
 		//2nd view
 		glViewport(75.0, 75.0, window_width/4.0f, window_height/4.0f);
 		glScissor(75.0, 75.0, window_width/4.0f, window_height/4.0f);
@@ -614,9 +679,36 @@ int GameWorld::generate_missile_powerup_list() {
 	return 0;
 }
 
+//generates the list to deisplay the flare upon firing a sniper bullet
+int GameWorld::generate_flare_list() {
+	if(flare_list == 0) {
+		string flare_texture;
+		flare_list = glGenLists(1);
+
+		glNewList(flare_list, GL_COMPILE);
+			flare_texture = "flare.tga";
+			int texture_index = 0;
+			while(flare_texture.compare(texture_file_names[texture_index]) != 0) {
+				texture_index++;
+			}
+
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+			glBegin(GL_QUADS);
+			{
+				glTexCoord2f(1.0, 1.0); glVertex3f(10.0, 10.0, 0);   //A
+				glTexCoord2f(1.0, 0.0); glVertex3f(10.0, -10.0, 0);  //B
+				glTexCoord2f(0.0, 0.0); glVertex3f(-10.0, -10.0, 0); //C
+				glTexCoord2f(0.0, 1.0); glVertex3f(-10.0, 10.0, 0);  //D
+			}
+			glEnd();
+		glEndList();
+	}
+
+	return 0;
+}
+
 //displays the text on the screen
-void GameWorld::load_text(string text, string font_type, FTPoint& position, unsigned int size) {
-	FTGLPixmapFont font(font_type.c_str());
+void GameWorld::load_text(string text, FTPoint& position, unsigned int size) {
 	font.FaceSize(size);
 	font.Render(text.c_str(), -1, position);
 }
@@ -726,6 +818,8 @@ void GameWorld::create_call_lists() {
 	//generate the power up display lists
 	generate_health_powerup_list();
 	generate_missile_powerup_list();
+
+	generate_flare_list();
 }
 
 //create the water mesh to display water
@@ -736,6 +830,91 @@ void GameWorld::create_water_mesh() {
 			mesh_dimensions[x][z][1] = (float) 0.0;
 			mesh_dimensions[x][z][2] = (float) (mesh_size / 2) - z;
 		}
+	}
+}
+
+//create the smoke particles
+void GameWorld::create_smoke() {
+	for (int i = 1; i < ParticleCount; i++) {
+		Smoke[i].Xpos = 0;
+		Smoke[i].Ypos = 0;
+		Smoke[i].Zpos = 0;
+		Smoke[i].Xmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		Smoke[i].Zmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		Smoke[i].Red = 1;
+		Smoke[i].Green = 1;
+		Smoke[i].Blue = 1;
+		Smoke[i].Scalez = 5.0;
+		Smoke[i].Direction = 0;
+		Smoke[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.005;
+		Smoke[i].Deceleration = 0.0000025;
+	}
+}
+
+//create the explosion particles
+void GameWorld::create_explosion() {
+	for (int i = 1; i < ParticleCount; i++) {
+		Explosion[i].Xpos = 0;
+		Explosion[i].Ypos = 0;
+		Explosion[i].Zpos = 0;
+		Explosion[i].Xmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		Explosion[i].Zmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		Explosion[i].Red = 1;
+		Explosion[i].Green = 1;
+		Explosion[i].Blue = 1;
+		Explosion[i].Scalez = 5.0;
+		Explosion[i].Direction = 0;
+		Explosion[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.02;
+		Explosion[i].Deceleration = 0.0025;
+	}
+}
+
+//create the missile particles
+void GameWorld::create_missile_particles() {
+	for (int i = 1; i < SMParticleCount; i++) {
+		missile_particle[i].Xpos = 0;
+		missile_particle[i].Ypos = 0;
+		missile_particle[i].Zpos = 0;
+		missile_particle[i].Xmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		missile_particle[i].Zmov = (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005) - (((((((2 - 1 + 1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1) * 0.005);
+		missile_particle[i].Red = 1;
+		missile_particle[i].Green = 1;
+		missile_particle[i].Blue = 1;
+		missile_particle[i].Scalez = 0.25;
+		missile_particle[i].Direction = 0;
+		missile_particle[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.01;
+		missile_particle[i].Deceleration = 0.025;
+	}
+}
+
+//create the cloud mesh
+void GameWorld::create_cloud_mesh() {
+	for (int x = 0; x < mesh_size; x++) {
+		for (int z = 0; z < mesh_size; z++) {
+			cloud_mesh[x][z][0] = (float) (mesh_size / 2) - x;
+			cloud_mesh[x][z][1] = (float) 0.0;
+			cloud_mesh[x][z][2] = (float) (mesh_size / 2) - z;
+		}
+	}
+}
+
+//creates the rain particles
+void GameWorld::create_rain() {
+	int mid_count = ParticleCount * 0.5;
+
+	for (int i = 1; i < ParticleCount; i++) {
+		Rain[i].Xpos = i - mid_count;
+		Rain[i].Ypos = 10;
+		Rain[i].Zpos = 0;
+		Rain[i].Xmov = 0;
+		Rain[i].Zmov = 0;
+		Rain[i].Red = 1;
+		Rain[i].Green = 1;
+		Rain[i].Blue = 1;
+		Rain[i].Scalez = 0.25;
+		Rain[i].Direction = 0;
+		Rain[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.01;
+		Rain[i].Deceleration = 0.025;
 	}
 }
 
@@ -834,6 +1013,20 @@ void GameWorld::initialize_power_ups() {
 			current_power_up.type = 'M';
 
 		power_ups.push_back(current_power_up);
+	}
+}
+
+//used to calculate the frames per second of the game
+void GameWorld::calculate_fps(float dtime) {
+	//fps_time is the total time since the last time the fps was calculated
+	fps_time += dtime;
+	++fps_count;
+
+	// When enough frames have elapsed, the fps is recalculated.
+	if (fps_count == fps_sample_size){
+		fps = static_cast<size_t>(static_cast<float>(fps_sample_size) / fps_time);
+		fps_count = 0;
+		fps_time = 0;
 	}
 }
 
@@ -972,6 +1165,7 @@ int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_at
 		if (collision_distance < overlap ) {
 			collision = 1;
 			island_under_attack = i;
+			explosion_location = ammo_location;
 		}
 	}
 	
@@ -1053,6 +1247,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		if(ammo_mode == 1) {
 			if(health <= 10) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1062,6 +1264,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		} else if(ammo_mode == 2) {
 			if(health == 5) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1071,6 +1281,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		} else {
 			if(health <= 50) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1082,6 +1300,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		if(ammo_mode == 1) {
 			if(health <= 20) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1091,6 +1317,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		} else if(ammo_mode == 2) {
 			if(health <= 10) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1100,6 +1334,14 @@ void GameWorld::reduce_island_health(int& island_number){
 		} else {
 			if(health <= 100) {
 				health = 0;
+				glPushMatrix();
+				{
+					glTranslatef(islands.at(island_number).getLocation().x, 10, islands.at(island_number).getLocation().z);
+					create_explosion();
+					update_explosion();
+					draw_explosion();
+				}
+				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
@@ -1144,7 +1386,7 @@ void GameWorld::update_score(int& island_number) {
 void GameWorld::update_lighting() {
 	current_time_light = (int)(glfwGetTime() - start_time);
 
-	if( (current_time_light % 50 == 0) && ( (current_time_light - prev_time_light) > 1) ) {
+	if( (current_time_light % 30 == 0) && ( (current_time_light - prev_time_light) > 1)) {
 		float ambient_light_value = ambient_light[0];
 		float diffuse_light_value = diffusive_light[0];
 		float specular_light_value = specular_light[0];
@@ -1187,6 +1429,83 @@ void GameWorld::update_lighting() {
 	}
 }
 
+//updates the smoke
+void GameWorld::update_smoke() {
+	for (int i = 1; i < ParticleCount; i++) {
+		glColor3f (Smoke[i].Red, Smoke[i].Green, Smoke[i].Blue);
+
+		Smoke[i].Ypos = Smoke[i].Ypos + Smoke[i].Acceleration + Smoke[i].Deceleration;
+		Smoke[i].Deceleration = Smoke[i].Deceleration + 0.0025;
+		Smoke[i].Xpos = Smoke[i].Xpos + Smoke[i].Xmov;
+		Smoke[i].Zpos = Smoke[i].Zpos + Smoke[i].Zmov;
+		Smoke[i].Direction = Smoke[i].Direction + ((((((int)(0.5 - 0.1 + 0.1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1);
+
+		
+		if (Smoke[i].Ypos > 5) {
+			Smoke[i].Xpos = 0;
+			Smoke[i].Ypos = 0;
+			Smoke[i].Zpos = 0;
+			Smoke[i].Red = 1;
+			Smoke[i].Green = 1;
+			Smoke[i].Blue = 1;
+			Smoke[i].Direction = 0;
+			Smoke[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.005;
+			Smoke[i].Deceleration = 0.0000025;
+		}	
+	}
+}
+
+//updates the explosion
+void GameWorld::update_explosion() {
+	for (int i = 1; i < ParticleCount; i++) {
+		glColor3f (Explosion[i].Red, Explosion[i].Green, Explosion[i].Blue);
+
+		Explosion[i].Ypos = Explosion[i].Ypos + Explosion[i].Acceleration - Explosion[i].Deceleration;
+		Explosion[i].Deceleration = Explosion[i].Deceleration + 0.0025;
+		Explosion[i].Xpos = Explosion[i].Xpos + Explosion[i].Xmov;
+		Explosion[i].Zpos = Explosion[i].Zpos + Explosion[i].Zmov;
+		Explosion[i].Direction = Explosion[i].Direction + ((((((int)(0.5 - 0.1 + 0.1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1);
+	}
+}
+
+//updates the missile particles
+void GameWorld::update_missile_particles() {
+	for (int i = 1; i < SMParticleCount; i++) {
+		glColor3f (missile_particle[i].Red, missile_particle[i].Green, missile_particle[i].Blue);
+
+		missile_particle[i].Ypos = missile_particle[i].Ypos + missile_particle[i].Acceleration - missile_particle[i].Deceleration;
+		missile_particle[i].Deceleration = missile_particle[i].Deceleration + 0.0025;
+		missile_particle[i].Xpos = missile_particle[i].Xpos + missile_particle[i].Xmov;
+		missile_particle[i].Zpos = missile_particle[i].Zpos + missile_particle[i].Zmov;
+		missile_particle[i].Direction = missile_particle[i].Direction + ((((((int)(0.5 - 0.1 + 0.1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1);
+	}
+}
+
+//updates rain
+void GameWorld::update_rain() {
+	int mid_count = ParticleCount * 0.5;
+	for (int i = 1; i < ParticleCount; i++) {
+		glColor3f (Rain[i].Red, Rain[i].Green, Rain[i].Blue);
+
+		Rain[i].Ypos = Rain[i].Ypos - Rain[i].Acceleration - Rain[i].Deceleration;
+		Rain[i].Deceleration = Rain[i].Deceleration + 0.0025;
+		Rain[i].Direction = Rain[i].Direction + ((((((int)(0.5 - 0.1 + 0.1) * rand()%11) + 1) - 1 + 1) * rand()%11) + 1);
+		
+		if (Rain[i].Ypos < -2)
+		{
+			Rain[i].Xpos = i - mid_count;
+			Rain[i].Ypos = 10;
+			Rain[i].Zpos = 0;
+			Rain[i].Red = 1;
+			Rain[i].Green = 1;
+			Rain[i].Blue = 1;
+			Rain[i].Direction = 0;
+			Rain[i].Acceleration = ((((((8 - 5 + 2) * rand()%11) + 5) - 1 + 1) * rand()%11) + 1) * 0.02;
+			Rain[i].Deceleration = 0.025;
+		}
+	}
+}
+
 //draw the models by calling the display list
 void GameWorld::draw_model(GLuint& model_list) {
 	glCallList(model_list);
@@ -1211,10 +1530,6 @@ void GameWorld::draw_world() {
 		glTranslatef(side_movement, 0.0, forward_movement);
 		draw_ammo(shot_fired, ammo_number, rotation_value);
 		draw_bottom_world();
-				
-		//if(ammo_collision) {
-			//draw_smoke();
-		//}
 	}
 	glPopMatrix();
 
@@ -1235,50 +1550,56 @@ void GameWorld::draw_world() {
 	glPopMatrix();
 
 	//display frames per second on top right corner
+	FTPoint fps_text_position(window_width*0.88, window_height*0.95);
+	load_text("FPS:", fps_text_position, 24);
+
+	FTPoint fps_value_position(window_width*0.94, window_height*0.95);
+	string frames = intToString(fps);
+	load_text(frames, fps_value_position, 24);
 
 	//display ammo in centre bottom corner
 	FTPoint ammo_text_position(window_width*0.55, window_height*0.05);
-	load_text("Ammo", "../fonts/PAPYRUS.ttf", ammo_text_position, 24);
+	load_text("Ammo", ammo_text_position, 24);
 
 	FTPoint missile_text_position(window_width*0.62, window_height*0.05);
-	load_text("M:", "../fonts/PAPYRUS.ttf", missile_text_position, 24);
+	load_text("M:", missile_text_position, 24);
 
 	FTPoint missile_value_position(window_width*0.65, window_height*0.05);
 	string missiles = intToString(player_ship.player_ammo.missiles);
-	load_text(missiles, "../fonts/PAPYRUS.ttf", missile_value_position, 24);
+	load_text(missiles, missile_value_position, 24);
 
 	FTPoint bullet_text_position(window_width*0.70, window_height*0.05);
-	load_text("SB:", "../fonts/PAPYRUS.ttf", bullet_text_position, 24);
+	load_text("SB:", bullet_text_position, 24);
 
-	FTPoint bullet_value_position(window_width*0.75, window_height*0.05);
+	FTPoint bullet_value_position(window_width*0.73, window_height*0.05);
 	string bullets = intToString(player_ship.player_ammo.sniper_bullets);
-	load_text(bullets, "../fonts/PAPYRUS.ttf", bullet_value_position, 24);
+	load_text(bullets, bullet_value_position, 24);
 
-	FTPoint super_missile_text_position(window_width*0.80, window_height*0.05);
-	load_text("SM:", "../fonts/PAPYRUS.ttf", super_missile_text_position, 24);
+	FTPoint super_missile_text_position(window_width*0.77, window_height*0.05);
+	load_text("SM:", super_missile_text_position, 24);
 
-	FTPoint super_missile_value_position(window_width*0.85, window_height*0.05);
+	FTPoint super_missile_value_position(window_width*0.80, window_height*0.05);
 	string super_missiles = intToString(player_ship.player_ammo.super_missiles);
-	load_text(super_missiles, "../fonts/PAPYRUS.ttf", super_missile_value_position, 24);
+	load_text(super_missiles, super_missile_value_position, 24);
 
 	//display text when power up picked up centre mid screen
 	if(sniper_bullet_collected && glfwGetTime() - sniper_collected_time < 2.0) {
 		FTPoint sniper_collected_text_position(window_width*0.3, window_height*0.5);
-		load_text("Sniper Bullet Collected", "../fonts/ITCKRIST.ttf", sniper_collected_text_position, 34);
+		load_text("Sniper Bullet Collected", sniper_collected_text_position, 34);
 	}
 
 	if(super_missile_collected && glfwGetTime() - super_missile_collected_time < 2.0) {
 		FTPoint super_missile_collected_text_position(window_width*0.30, window_height*0.5);
-		load_text("Super Missile Collected", "../fonts/ITCKRIST.ttf", super_missile_collected_text_position, 34);
+		load_text("Super Missile Collected", super_missile_collected_text_position, 34);
 	}
 
 	//display score text
 	FTPoint score_text_position(window_width*0.88, window_height*0.05);
-	load_text("Score", "../fonts/PAPYRUS.ttf", score_text_position, 24);
+	load_text("Score", score_text_position, 24);
 
 	FTPoint score_value_position(window_width*0.96, window_height*0.05);
 	string score = intToString(player_ship.getCurrentScore());
-	load_text(score, "../fonts/PAPYRUS.ttf", score_value_position, 24);
+	load_text(score, score_value_position, 24);
 }
 
 //draw the sky, sun and clouds
@@ -1309,17 +1630,20 @@ void GameWorld::draw_top_world() {
 	}
 	glPopMatrix();
 
-	//draw clouds
+	//draw rain clouds
 	glPushMatrix();
 	{	
-		
+		if(ambient_light[0] <= 0.5) {
+			draw_rain();
+		}
 	}
 	glPopMatrix();
 }
 
 //draw the water and islands
 void GameWorld::draw_bottom_world() {
-	GLint location_time, location_wind;
+	GLfloat ship_location [] = {player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z};
+	GLint location_time, location_wind, location_ship, location_mov;
 
 	current_time = glfwGetTime();
 
@@ -1335,6 +1659,12 @@ void GameWorld::draw_bottom_world() {
 	location_wind = glGetUniformLocation(water_shader_program, "wind_factor");
 	glUniform1f(location_wind, wind_factor);
 
+	location_mov = glGetUniformLocation(water_shader_program, "movement");
+	glUniform1i(location_mov, movement);
+
+	location_ship = glGetUniformLocation(water_shader_program, "ship_location");
+	glUniform3fv(location_ship, 1, ship_location);
+
 	//draw water
 	glPushMatrix();
 	{	
@@ -1349,6 +1679,16 @@ void GameWorld::draw_bottom_world() {
 	{
 		draw_islands();
 		draw_island_health(0.5);
+
+		if(ammo_collision) {
+			glPushMatrix();
+			{
+				glTranslatef(explosion_location.x, 6, explosion_location.z);
+				draw_explosion();
+				draw_smoke();
+			}
+			glPopMatrix();
+		}
 	}
 	glPopMatrix();
 
@@ -1369,7 +1709,34 @@ void GameWorld::draw_bottom_world() {
 
 //draws the viewport
 void GameWorld::draw_viewport() {
-	
+	//draw the flare, sky, water, sun, islands, sniper bullet
+	if(glfwGetTime() - sniper_start_time <= 0.1) {
+		glPushMatrix();
+		{
+			glCallList(flare_list);
+		}
+		glPopMatrix();
+	}
+
+	glPushMatrix();
+	{
+		glTranslatef(current_ammo_location.x, current_ammo_location.y, current_ammo_location.z);
+		glPushMatrix();
+		{
+			glRotatef(scene_rotation, 0.0, 1.0, 0.0);
+			draw_top_world();
+		
+			glTranslatef(side_movement, 0.0, forward_movement);
+			draw_ammo(shot_fired, ammo_number, rotation_value);
+			draw_bottom_world();
+				
+			//if(ammo_collision) {
+				//draw_smoke();
+			//}
+		}
+		glPopMatrix();
+	}
+	glPopMatrix();
 }
 
 //draw the water and generate the display list if none exists
@@ -1821,5 +2188,198 @@ void GameWorld::draw_powerups() {
 			}
 			glPopMatrix();
 		}
+	}
+}
+
+//draw the smoke
+void GameWorld::draw_smoke() {
+	string smoke_texture;
+	smoke_texture = "smoke.tga";
+	int texture_index = 0;
+	while(smoke_texture.compare(texture_file_names[texture_index]) != 0) {
+		texture_index++;
+	}
+
+	for (int i = 1; i < ParticleCount; i++) {
+		glPushMatrix();
+			glTranslatef (Smoke[i].Xpos, Smoke[i].Ypos, Smoke[i].Zpos);
+			glRotatef (Smoke[i].Direction - 90, 0, 0, 1);
+   
+			glScalef (Smoke[i].Scalez, Smoke[i].Scalez, Smoke[i].Scalez);
+   
+			glDisable (GL_DEPTH_TEST);
+			glEnable (GL_BLEND);
+
+			glBlendFunc (GL_ONE, GL_ZERO);
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+    
+			glBegin (GL_QUADS);
+			glTexCoord2d (0, 0);
+			glVertex3f (-0.5, -0.5, 0);
+			glTexCoord2d (1, 0);
+			glVertex3f (0.5, -0.5, 0);
+			glTexCoord2d (1, 1);
+			glVertex3f (0.5, 0.5, 0);
+			glTexCoord2d (0, 1);
+			glVertex3f (-0.5, 0.5, 0);
+			glEnd();
+
+			glEnable(GL_DEPTH_TEST);
+		glPopMatrix();
+	}
+}
+
+//draw the explosion
+void GameWorld::draw_explosion() {
+	string explosion_texture;
+	explosion_texture = "explosion.tga";
+	int texture_index = 0;
+	while(explosion_texture.compare(texture_file_names[texture_index]) != 0) {
+		texture_index++;
+	}
+
+	for (int i = 1; i < ParticleCount; i++) {
+		glPushMatrix();
+			glTranslatef (Explosion[i].Xpos, Explosion[i].Ypos, Explosion[i].Zpos);
+			glRotatef (Explosion[i].Direction - 90, 0, 0, 1);
+   
+			glScalef (Explosion[i].Scalez, Explosion[i].Scalez, Explosion[i].Scalez);
+   
+			glDisable (GL_DEPTH_TEST);
+			glEnable (GL_BLEND);
+
+			glBlendFunc (GL_ONE, GL_ZERO);
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+    
+			glBegin (GL_QUADS);
+			glTexCoord2d (0, 0);
+			glVertex3f (-0.5, -0.5, 0);
+			glTexCoord2d (1, 0);
+			glVertex3f (0.5, -0.5, 0);
+			glTexCoord2d (1, 1);
+			glVertex3f (0.5, 0.5, 0);
+			glTexCoord2d (0, 1);
+			glVertex3f (-0.5, 0.5, 0);
+			glEnd();
+
+			glEnable(GL_DEPTH_TEST);
+		glPopMatrix();
+	}
+}
+
+//draw the missile particles
+void GameWorld::draw_missile_particles() {
+	string missile_particle_texture;
+	missile_particle_texture = "explosion.tga";
+	int texture_index = 0;
+	while(missile_particle_texture.compare(texture_file_names[texture_index]) != 0) {
+		texture_index++;
+	}
+
+	for (int i = 1; i < SMParticleCount; i++) {
+		glPushMatrix();
+			glTranslatef (missile_particle[i].Xpos, missile_particle[i].Ypos, missile_particle[i].Zpos);
+			glRotatef (missile_particle[i].Direction - 90, 0, 0, 1);
+   
+			glScalef (missile_particle[i].Scalez, missile_particle[i].Scalez, missile_particle[i].Scalez);
+   
+			glDisable (GL_DEPTH_TEST);
+			glEnable (GL_BLEND);
+
+			glBlendFunc (GL_ONE, GL_ZERO);
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+    
+			glBegin (GL_QUADS);
+			glTexCoord2d (0, 0);
+			glVertex3f (-0.5, -0.5, 0);
+			glTexCoord2d (1, 0);
+			glVertex3f (0.5, -0.5, 0);
+			glTexCoord2d (1, 1);
+			glVertex3f (0.5, 0.5, 0);
+			glTexCoord2d (0, 1);
+			glVertex3f (-0.5, 0.5, 0);
+			glEnd();
+
+			glEnable(GL_DEPTH_TEST);
+		glPopMatrix();
+	}
+}
+
+//draw the clouds
+void GameWorld::draw_clouds() {
+	if(cloud_list == 0) {
+		string cloud_texture;
+		cloud_list = glGenLists(1);
+
+		glNewList(cloud_list, GL_COMPILE);
+			cloud_texture = "rain-clouds.tga";
+			int texture_index = 0;
+			while(cloud_texture.compare(texture_file_names[texture_index]) != 0) {
+				texture_index++;
+			}
+
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+
+			// Start Drawing Our Mesh
+			float float_x, float_z, float_xb;
+			for (int x = 0; x < mesh_size - 1; x++) {
+				// Draw A Triangle Strip For Each Column Of Our Mesh
+				glBegin(GL_TRIANGLE_STRIP);
+				for (int z = 0; z < mesh_size - 1; z++) {
+					// texture points to be used
+					float_x = float(x)/mesh_size;		
+					float_z = float(z)/mesh_size;
+					float_xb = float(x+1)/mesh_size;
+			
+					// Set The Wave Parameter Of Our Shader To The Incremented Wave Value From Our Main Program
+					glTexCoord2f( float_x, float_z);
+					glVertex3f(cloud_mesh[x][z][0], cloud_mesh[x][z][1], cloud_mesh[x][z][2]);	// Draw Vertex
+
+					glTexCoord2f( float_xb, float_z );
+					glVertex3f(cloud_mesh[x+1][z][0], cloud_mesh[x+1][z][1], cloud_mesh[x+1][z][2]);	// Draw Vertex
+				}
+				glEnd();
+			}
+		glEndList();
+	} else {
+		glCallList(cloud_list);
+	}
+}
+
+//draw the rain
+void GameWorld::draw_rain() {
+	string rain_texture;
+	rain_texture = "ice.tga";
+	int texture_index = 0;
+	while(rain_texture.compare(texture_file_names[texture_index]) != 0) {
+		texture_index++;
+	}
+
+	for (int i = 1; i < ParticleCount; i++) {
+		glPushMatrix();
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glTranslatef (Rain[i].Xpos, Rain[i].Ypos, Rain[i].Zpos);
+   
+			glScalef (Rain[i].Scalez, Rain[i].Scalez, Rain[i].Scalez);
+   
+			glDisable (GL_DEPTH_TEST);
+			glEnable (GL_BLEND);
+
+			glBlendFunc (GL_ONE, GL_ZERO);
+			glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
+    
+			glBegin (GL_QUADS);
+			glTexCoord2d (0, 0);
+			glVertex3f (-0.1, -0.5, 0);
+			glTexCoord2d (1, 0);
+			glVertex3f (0.1, -0.5, 0);
+			glTexCoord2d (1, 1);
+			glVertex3f (0.1, 0.5, 0);
+			glTexCoord2d (0, 1);
+			glVertex3f (-0.1, 0.5, 0);
+			glEnd();
+
+			glEnable(GL_DEPTH_TEST);
+		glPopMatrix();
 	}
 }
