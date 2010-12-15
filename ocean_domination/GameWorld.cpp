@@ -1640,7 +1640,9 @@ void GameWorld::draw_top_world() {
 	glPushMatrix();
 	{	
 		if(ambient_light[0] <= 0.5) {
+			glDisable(GL_LIGHTING);
 			draw_rain();
+			glEnable(GL_LIGHTING);
 		}
 	}
 	glPopMatrix();
