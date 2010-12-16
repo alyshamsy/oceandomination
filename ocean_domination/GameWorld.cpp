@@ -1686,6 +1686,7 @@ void GameWorld::draw_bottom_world() {
 	glPushMatrix();
 	{
 		draw_islands();
+		//add billboard effect
 		draw_island_health(0.5);
 
 		if(ammo_collision) {
