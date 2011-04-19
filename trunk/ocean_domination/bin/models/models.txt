@@ -1,0 +1,10 @@
+# Displays all the models to be used by the game
+bullet.obj
+canon.obj
+enemy.obj
+island.obj
+missile.obj
+sky.obj
+sun.obj
+super-missile.obj
+weapon.obj

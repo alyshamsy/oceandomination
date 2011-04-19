@@ -22,8 +22,8 @@
     <ClCompile Include="ShaderLoader.cpp" />
     <ClCompile Include="Ship.cpp" />
     <ClCompile Include="TextureLoader.cpp" />
-    <ClCompile Include="TextureVertex.cpp" />
-    <ClCompile Include="Vertex.cpp" />
+    <ClCompile Include="TextureVector.cpp" />
+    <ClCompile Include="Vector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h" />
@@ -34,16 +34,10 @@
     <ClInclude Include="MtlHandler.h" />
     <ClInclude Include="ShaderLoader.h" />
     <ClInclude Include="Ship.h" />
-    <ClInclude Include="TextureLoader.h" />
-    <ClInclude Include="TextureVertex.h" />
+    <ClInclude Include="TextureVector.h" />
+    <ClInclude Include="Vector.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="GameWorld.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="default.level" />
-    <None Include="levels.txt" />
-    <None Include="textures.txt" />
-    <None Include="water_shader.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}</ProjectGuid>
@@ -76,11 +70,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../lib-msvc100/debug;../lib-ftgl/debug;../lib-freetype;../lib-glew;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib-glfw/debug;lib-ftgl/debug;lib-freetype;lib-glew;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opengl32.lib;glu32.lib;glfw.lib;ftgl_D.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

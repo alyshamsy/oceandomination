@@ -1,2 +1,0 @@
-#define the level filename to be loaded
-default.level

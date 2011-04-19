@@ -50,14 +50,16 @@ void init() {
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		//add a texture image for the game
 		//add flashing for the loading sign
+	current_game.setFontSize(72);
+
 	FTPoint game_name_1(window_width*0.4, window_height*0.75);
-	current_game.load_text("Ocean", game_name_1, 72);
+	current_game.load_text("Ocean", game_name_1);
 
 	FTPoint game_name_2(window_width*0.33, window_height*0.65);
-	current_game.load_text("Domination", game_name_2, 72);
+	current_game.load_text("Domination", game_name_2);
 
 	FTPoint text_position(window_width*0.36, window_height*0.25);
-	current_game.load_text("Loading...", text_position, 72);
+	current_game.load_text("Loading...", text_position);
 	glfwSwapBuffers();
 
 	current_game.InitializeGameWorld();
@@ -110,24 +112,26 @@ int main() {
 			//add a texture image for the game
 			//add flashing for the loading sign
 		if(game_end == 0) {
-			
+			current_game.setFontSize(48);
 			FTPoint text_position(window_width*0.2, window_height*0.5);
-			current_game.load_text("Thank you for Playing Ocean Domination", text_position, 48);
+			current_game.load_text("Thank you for Playing Ocean Domination", text_position);
 		} else {
+			current_game.setFontSize(72);
 			FTPoint text_position(window_width*0.35, window_height*0.75);
-			current_game.load_text("Game Over", text_position, 72);
+			current_game.load_text("Game Over", text_position);
 
 			if(game_end == 1) {
 				FTPoint text_position(window_width*0.38, window_height*0.35);
-				current_game.load_text("You Lose!", text_position, 72);
+				current_game.load_text("You Lose!", text_position);
 			} else if(game_end == 2) {
 				FTPoint text_position(window_width*0.39, window_height*0.35);
-				current_game.load_text("You Win!", text_position, 72);
+				current_game.load_text("You Win!", text_position);
 			}
 		}
 
+		current_game.setFontSize(20);
 		FTPoint exit_text_position(window_width*0.45, window_height*0.1);
-		current_game.load_text("Press Enter to Exit", exit_text_position, 20);
+		current_game.load_text("Press Enter to Exit", exit_text_position);
 
 		glfwSwapBuffers();
 

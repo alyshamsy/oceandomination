@@ -6,7 +6,7 @@ Ship::Ship() {
 Ship::~Ship() {
 }
 
-int Ship::InitializeShip(Vertex& location) {
+int Ship::InitializeShip(Vector& location) {
 	this->health = 100;
 
 	this->location.x = location.x;
@@ -14,13 +14,13 @@ int Ship::InitializeShip(Vertex& location) {
 	this->location.z = location.z;
 
 	this->player_ammo.missiles = 50;
-	this->player_ammo.super_missiles = 0;
-	this->player_ammo.sniper_bullets = 10;
+	this->player_ammo.super_missiles = 5;
+	this->player_ammo.sniper_bullets = 20;
 
 	return 0;
 }
 
-int Ship::UpdateShipLocation(Vertex& current_location) {
+int Ship::UpdateShipLocation(Vector& current_location) {
 	this->location.x = current_location.x;
 	this->location.y = current_location.y;
 	this->location.z = current_location.z;

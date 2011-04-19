@@ -1,0 +1,3 @@
+# Displays all the sounds to be used by the game
+menu-change.wav
+tada.wav

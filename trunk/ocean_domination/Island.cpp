@@ -8,7 +8,7 @@ Island::~Island() {
 
 }
 
-int Island::InitializeIsland(Vertex location, char island_type) {
+int Island::InitializeIsland(Vector location, char island_type) {
 	this->health = 100;
 	this->under_attack = false;
 
@@ -69,7 +69,7 @@ void Island::UpdateWeaponRotationAngle(float weapon_rotation_angle) {
 	this->weapon_rotation_angle = weapon_rotation_angle;
 }
 
-void Island::UpdateAmmoLocation(Vertex island_ammo_location) {
+void Island::UpdateAmmoLocation(Vector island_ammo_location) {
 	this->island_ammo_location = island_ammo_location;
 }
 
