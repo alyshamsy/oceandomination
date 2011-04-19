@@ -1,12 +1,17 @@
 #ifndef File_Loader_H
 #define File_Loader_H
 
-#include "Vertex.h"
-#include "TextureVertex.h"
+#include "Helper.h"
+#include "Vector.h"
+#include "TextureVector.h"
 #include "Face.h"
 #include "MtlHandler.h"
+#include <GL/glfw.h>
+#include <GL/glext.h>
 #include <string>
 #include <fstream>
+#include <iostream>
+#include <sstream>
 #include <vector>
 
 using namespace std;
@@ -17,26 +22,37 @@ There are 2 vectors, one of type Vertex and one of type Face which stores the ve
 */
 
 class ModelLoader {
+private:
+	struct model {
+		vector<Vector> vertices;
+		vector<TextureVector> texture_vertices;
+		vector<Vector> normal_vertices;
+		vector<Face> faces;
+		//vector<MtlHandler> materials;
+		vector<int> start_index;
+		vector<string> objects;
+
+		int end_index;
+		int smooth_shading;
+	};
+
+	vector<model>* game_models;
+	vector<MtlHandler>* materials;
+
+	string current_file;
+	fstream read_model_file;
+	int array_size;
+
+	string TrimSpaces(string& current_line);
+	//int ParseModels(vector<string>* models, model current_model);
+
 public:
 	ModelLoader();
 	~ModelLoader();
 
-	int LoadModel(string& model_file_name);
-
-	struct Model {
-		vector<Vertex>* vertices;
-		vector<TextureVertex>* texture_vertices;
-		vector<Vertex>* normal_vertices;
-		vector<Face>* faces;
-		vector<MtlHandler>* materials;
-		int smooth_shading;
-	} current_model;
-
-private:
-	string current_file;
-	fstream read_model_file;
-	int array_size;
-	int ParseFile(string& file_name);
-
+	int LoadModel(vector<string>* models);
+	int LoadMaterials(vector<string>* material_files);
+	int GenerateModelDisplayList(vector<GLuint>* model_display_list, GLuint* texture_images, vector<string>* texture_file_names);
+	int GenerateModelVBO(vector<GLuint>* model_vbo_id, GLuint* texture_images, vector<string>* texture_file_names);
 };
 #endif

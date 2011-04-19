@@ -1,0 +1,10 @@
+# Displays all the materials to be used by the models
+bullet.mtl
+canon.mtl
+enemy.mtl
+island.mtl
+missile.mtl
+sky.mtl
+sun.mtl
+super-missile.mtl
+weapon.mtl

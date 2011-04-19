@@ -18,6 +18,7 @@ public:
 	float Kd[number_of_colors];
 	float Ks[number_of_colors];
 	float Ns;
+	float Ni;
 	float d;
 	int illum;
 	string map_Ka;

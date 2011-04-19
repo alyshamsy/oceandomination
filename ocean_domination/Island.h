@@ -1,7 +1,7 @@
 #ifndef Island_H
 #define Island_H
 
-#include "Vertex.h"
+#include "Vector.h"
 
 #define small_island_radius 10.0f
 #define medium_island_radius 15.0f
@@ -16,18 +16,18 @@ public:
 	Island();
 	~Island();
 
-	int InitializeIsland(Vertex location, char island_type);
+	int InitializeIsland(Vector location, char island_type);
 	void UpdateHealth(int health);
 	void UpdateUnderAttack( bool under_attack);
 	void UpdateWeaponFire(bool weapon_fire);
 	void UpdateWeaponRotationAngle(float weapon_rotation_angle);
-	void UpdateAmmoLocation(Vertex island_ammo_location);
+	void UpdateAmmoLocation(Vector island_ammo_location);
 
 	void ResetAmmoLocation();
 	void CreateHealthBar();
 
-	Vertex getLocation() { return location; }
-	Vertex getAmmoLocation() { return island_ammo_location; }
+	Vector getLocation() { return location; }
+	Vector getAmmoLocation() { return island_ammo_location; }
 	char getIslandType() { return island_type; }
 	bool doWeaponFire() { return weapon_fire; }
 	float getIslandRadius() { return island_radius; }	
@@ -38,8 +38,8 @@ public:
 	int getHealth() { return health; }
 	
 private:
-	Vertex location;
-	Vertex island_ammo_location;
+	Vector location;
+	Vector island_ammo_location;
 	char island_type;
 	bool weapon_fire;
 	float island_radius;

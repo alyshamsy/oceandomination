@@ -1,7 +1,7 @@
 #include "LevelLoader.h"
 
 LevelLoader::LevelLoader() {
-	island_coordinates = new vector<Vertex>();
+	island_coordinates = new vector<Vector>();
 	level_files = new vector<string>();
 }
 
@@ -16,7 +16,7 @@ LevelLoader::~LevelLoader() {
 int LevelLoader::LoadLevels() {
 	string levels;
 
-	level_reader.open("levels.txt", ios::in);
+	level_reader.open("bin/levels/levels.txt", ios::in);
 
 	if(!level_reader) {
 		cout << "could not read file: levels.txt" << endl;
@@ -43,11 +43,12 @@ int LevelLoader::LoadLevels() {
 int LevelLoader::LoadLevel(string& level_file_name) {
 	island_coordinates->clear();
 
+	string file_location = "bin/levels/" + level_file_name;
 	string island_type;
 	int island_number = 0.0;
-	Vertex island_location;
+	Vector island_location;
 
-	level_reader.open(level_file_name.c_str(), ios::in);
+	level_reader.open(file_location.c_str(), ios::in);
 
 	if(!level_reader) {
 		cout << "could not read file: " << level_file_name << endl;

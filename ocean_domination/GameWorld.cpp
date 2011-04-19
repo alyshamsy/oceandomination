@@ -32,7 +32,7 @@ Particles Explosion[ParticleCount];
 Particles missile_particle[SMParticleCount];
 Particles Rain[ParticleCount];
 
-GameWorld::GameWorld():font("../fonts/CAMBRIA.ttf") {
+GameWorld::GameWorld():font("bin/fonts/CAMBRIA.ttf") {
 	//game window dimensions
 	window_width = 1280, window_height = 720;
 	aspect_ratio = (float)window_width/window_height;
@@ -115,8 +115,17 @@ GameWorld::~GameWorld() {
 	delete texture_images;
 	texture_images = NULL;
 
-	delete[] texture_file_names;
+	delete texture_file_names;
 	texture_file_names = NULL;
+
+	delete models;
+	models = NULL;
+
+	delete materials;
+	materials = NULL;
+	
+	delete model_display_list;
+	model_display_list = NULL;
 }
 
 //initializes the variables in the game world
@@ -124,15 +133,26 @@ int GameWorld::InitializeGameWorld() {
 	//create shader programs
 	water_shader_program = glCreateProgram();
 
-	//load all models
-	load_models();
+	string textureFileName ="textures.txt";
+	loadTextures(textureFileName);
 
-	//load all textures
-	string texture_file_name = "textures.txt";
-	load_textures(texture_file_name);
+	string materials_file_name  = "materials.txt";
+	loadMaterials(materials_file_name);
+
+	string models_file_name = "models.txt";
+	loadModels(models_file_name);
+
+	generateModelLists();
+
+	////load all models
+	//load_models();
+
+	////load all textures
+	//string texture_file_name = "textures.txt";
+	//load_textures(texture_file_name);
 
 	//load the game level filenames into memory and load the first level
-	load_levels();
+	loadLevels();
 
 	//create all call lists
 	create_call_lists();
@@ -141,11 +161,13 @@ int GameWorld::InitializeGameWorld() {
 	create_water_mesh();
 
 	//create particles
-	create_cloud_mesh();
+	//create_cloud_mesh();
 	create_smoke();
 	create_explosion();
 	create_missile_particles();
 	create_rain();
+
+	setFontSize(24);
 
 	return 0;
 }
@@ -167,7 +189,7 @@ int GameWorld::CreateGameWorld() {
 
 //updates the game world and detects collision
 int GameWorld::UpdateGameWorld() {
-	Vertex next_ship_location = current_ship_location;
+	Vector next_ship_location = current_ship_location;
 	int location = 0;
 	float bounce_frequency = 0.0;
 
@@ -179,7 +201,7 @@ int GameWorld::UpdateGameWorld() {
 	//set the camera mode for different ammo mode
 	if(ammo_mode != 2) {
 		glLoadIdentity();
-		glTranslatef(0.0, 0.0, -7.0);
+		glTranslatef(0.0, 0.0, -10.0);
 		glRotatef(17, 1.0, 0.0, 0.0);
 	} else if(ammo_mode == 2) {
 		glLoadIdentity();
@@ -188,13 +210,13 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	//if the up key is pressed, move in the positive x and z direction
-	if(glfwGetKey(GLFW_KEY_UP) == GLFW_PRESS) {
+	if(glfwGetKey(GLFW_KEY_UP) || glfwGetKey( 'W' )) {
 		next_ship_location.x -= (float)sin(rotation_value*radian_conversion) * 0.2f;
 		next_ship_location.z -= (float)cos(rotation_value*radian_conversion) * 0.2f;
 	}
 
 	//if the down key is pressed, move in the negative x and z direction
-	if(glfwGetKey(GLFW_KEY_DOWN) == GLFW_PRESS) {
+	if(glfwGetKey(GLFW_KEY_DOWN) || glfwGetKey( 'S' )) {
 		next_ship_location.x += (float)sin(rotation_value*radian_conversion) * 0.2f;
 		next_ship_location.z += (float)cos(rotation_value*radian_conversion) * 0.2f;
 	}
@@ -215,12 +237,12 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	//if the right key is pressed, rotate in the positive direction
-	if(glfwGetKey(GLFW_KEY_RIGHT) == GLFW_PRESS) {
+	if(glfwGetKey(GLFW_KEY_RIGHT) || glfwGetKey( 'D' )) {
 		rotation_value -= 0.5f;
 	}
 
 	//if the left key is pressed, rotate in the negative direction
-	if(glfwGetKey(GLFW_KEY_LEFT) == GLFW_PRESS) {
+	if(glfwGetKey(GLFW_KEY_LEFT) || glfwGetKey( 'A' )) {
 		rotation_value += 0.5f;
 	}
 
@@ -228,7 +250,7 @@ int GameWorld::UpdateGameWorld() {
 	player_ship.UpdateShipLocation(current_ship_location);
 	
 	//switch the firing mode if the right button is pressed
-	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS && shot_fired == false && glfwGetTime() - button_timeout > 0.5) {
+	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_RIGHT) && shot_fired == false && glfwGetTime() - button_timeout > 0.5) {
 		button_timeout = glfwGetTime();
 
 		if(ammo_mode == 1) {
@@ -254,7 +276,8 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	//check if left button was pressed and fire the ammo if an ammo hasnt been fired 
-	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS && shot_fired == false) {
+	if(glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT) && shot_fired == false && glfwGetTime() - button_timeout > 0.5) {
+		button_timeout = glfwGetTime();
 		missile_start_time = glfwGetTime();
 		shot_fired = true;
 
@@ -283,13 +306,19 @@ int GameWorld::UpdateGameWorld() {
 
 	//increase sniper bullets by 2 when killing 2 islands and 2 super missiles when killing 5 islands
 	if((starting_total_islands - islands.size()) % 3 == 0 && (starting_total_islands - islands.size()) != 0 && sniper_bullet_collected == false) {
-		player_ship.player_ammo.sniper_bullets += 2;
+		player_ship.player_ammo.sniper_bullets += 5;
 		sniper_bullet_collected = true;
 		sniper_collected_time = glfwGetTime();
 	} else if((starting_total_islands - islands.size()) % 5 == 0 && (starting_total_islands - islands.size()) != 0 && super_missile_collected == false) {
 		player_ship.player_ammo.super_missiles += 2;
 		super_missile_collected = true;
 		super_missile_collected_time = glfwGetTime();
+	}
+
+	if((starting_total_islands - islands.size()) % 3 == 1 && sniper_bullet_collected == true) {
+		sniper_bullet_collected = false;
+	} else if((starting_total_islands - islands.size()) % 5 == 1 && super_missile_collected == true) {
+		super_missile_collected = false;
 	}
 
 	//adjusting rotation and forward and backward movement
@@ -315,18 +344,18 @@ int GameWorld::UpdateGameWorld() {
 			islands.at(island_under_attack).UpdateUnderAttack(true);
 			if(ammo_mode == 1 && glfwGetTime() - missile_start_time >= 0.25) {
 				reduce_island_health(island_under_attack);
-				sniper_bullet_collected = false;
-				super_missile_collected = false;
+				//sniper_bullet_collected = false;
+				//super_missile_collected = false;
 				island_hit = true;
 			} else if(ammo_mode == 2 && glfwGetTime() - missile_start_time >= 0.25) {
 				reduce_island_health(island_under_attack);
-				sniper_bullet_collected = false;
-				super_missile_collected = false;
+				//sniper_bullet_collected = false;
+				//super_missile_collected = false;
 				island_hit = true;
 			} else if(ammo_mode == 3 && glfwGetTime() - missile_start_time >= 0.5) {
 				reduce_island_health(island_under_attack);
-				sniper_bullet_collected = false;
-				super_missile_collected = false;
+				//sniper_bullet_collected = false;
+				//super_missile_collected = false;
 				island_hit = true;
 			}
 		}
@@ -472,100 +501,6 @@ void GameWorld::setup_camera() {
 	}
 }
 
-//generate the call list from the model and the call list value
-int GameWorld::generate_model_display_list(ModelLoader& model, GLuint model_call_list) {
-	if(model_call_list != 0) {
-		string current_material;
-		string current_texture;
-
-		GLfloat** vertex_vector = generate_vector(3, 3);
-		GLfloat** normals_vector = generate_vector(3, 3);
-		GLfloat** texture_vector = generate_vector(3, 2);
-
-		glNewList(model_call_list, GL_COMPILE);
-			for(int i = 0; i < model.current_model.faces->size(); i++) {
-				//load materials and bind textures
-				//if the current material is the same as in previous iteration do not relaoad the material values
-				if(current_material.compare(model.current_model.faces->at(i).texture_material) != 0) {
-					current_material = model.current_model.faces->at(i).texture_material;
-					if(current_material.compare("(null)") != 0) {
-						int material_index = 0;
-						while(current_material.compare(model.current_model.materials->at(material_index).newmtl) != 0)
-							material_index++;
-
-						//assign material values
-						glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, model.current_model.materials->at(material_index).Ns);
-						glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &model.current_model.materials->at(material_index).Ka);
-						glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &model.current_model.materials->at(material_index).Kd);
-						glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &model.current_model.materials->at(material_index).Ks);
-
-						//bind texture
-						current_texture = model.current_model.materials->at(material_index).map_Kd;
-						int texture_index = 0;
-						while(current_texture.compare(texture_file_names[texture_index]) != 0) {
-							texture_index++;
-						}
-
-						glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
-					}
-				}
-				
-				//load vectors
-				int j = 0, vertex_index = 0, normals_index = 0, texture_index = 0, index = 0;
-				while(j < model.current_model.faces->at(i).face.size()) {
-					if(j%3 == 0) {
-						index = model.current_model.faces->at(i).face.at(j) - 1;
-						
-						vertex_vector[vertex_index][0] = model.current_model.vertices->at(index).x;
-						vertex_vector[vertex_index][1] = model.current_model.vertices->at(index).y;
-						vertex_vector[vertex_index][2] = model.current_model.vertices->at(index).z;
-
-						vertex_index++;
-					} else if(j%3 == 1) {
-						index = model.current_model.faces->at(i).face.at(j) - 1;
-
-						texture_vector[texture_index][0] = model.current_model.texture_vertices->at(index).u;
-						texture_vector[texture_index][1] = model.current_model.texture_vertices->at(index).v;	
-
-						texture_index++;
-					} else if(j%3 == 2) {
-						index = model.current_model.faces->at(i).face.at(j) - 1;
-
-						normals_vector[normals_index][0] = model.current_model.normal_vertices->at(index).x;
-						normals_vector[normals_index][1] = model.current_model.normal_vertices->at(index).y;
-						normals_vector[normals_index][2] = model.current_model.normal_vertices->at(index).z;
-
-						normals_index++;
-					}
-					j++;
-				}
-
-				//draw the triangle
-				glBegin(GL_TRIANGLES);
-					//first point
-					glTexCoord2fv(texture_vector[0]);
-					glNormal3fv(normals_vector[0]);
-					glVertex3fv(vertex_vector[0]);
-					//second point
-					glTexCoord2fv(texture_vector[1]);
-					glNormal3fv(normals_vector[1]);
-					glVertex3fv(vertex_vector[1]);
-					//third point
-					glTexCoord2fv(texture_vector[2]);
-					glNormal3fv(normals_vector[2]);
-					glVertex3fv(vertex_vector[2]);
-				glEnd();
-			}
-		glEndList();
-
-		delete_vector(vertex_vector, 3);
-		delete_vector(normals_vector, 3);
-		delete_vector(texture_vector, 3);
-	}
-
-	return 0;
-}
-
 //generates the call lists for all the shaders used in the program
 int GameWorld::generate_shader_display_list(string& vertex_shader_name, string& fragment_shader_name, GLuint& shader_call_list) {
 	int return_value = 0;
@@ -588,7 +523,7 @@ int GameWorld::generate_health_powerup_list() {
 		glNewList(health_powerup_list, GL_COMPILE);
 			health_texture = "health.tga";
 			int texture_index = 0;
-			while(health_texture.compare(texture_file_names[texture_index]) != 0) {
+			while(health_texture.compare(texture_file_names->at(texture_index)) != 0) {
 				texture_index++;
 			}
 
@@ -641,7 +576,7 @@ int GameWorld::generate_missile_powerup_list() {
 		glNewList(missile_powerup_list, GL_COMPILE);
 			missile_texture = "missile.tga";
 			int texture_index = 0;
-			while(missile_texture.compare(texture_file_names[texture_index]) != 0) {
+			while(missile_texture.compare(texture_file_names->at(texture_index)) != 0) {
 				texture_index++;
 			}
 
@@ -694,7 +629,7 @@ int GameWorld::generate_flare_list() {
 		glNewList(flare_list, GL_COMPILE);
 			flare_texture = "flare.tga";
 			int texture_index = 0;
-			while(flare_texture.compare(texture_file_names[texture_index]) != 0) {
+			while(flare_texture.compare(texture_file_names->at(texture_index)) != 0) {
 				texture_index++;
 			}
 
@@ -713,71 +648,128 @@ int GameWorld::generate_flare_list() {
 	return 0;
 }
 
-//displays the text on the screen
-void GameWorld::load_text(string text, FTPoint& position, unsigned int size) {
+//sets the font size of the text on the screen
+void GameWorld::setFontSize(unsigned int size) {
 	font.FaceSize(size);
+}
+
+//displays the text on the screen
+void GameWorld::load_text(string text, FTPoint& position) {
 	font.Render(text.c_str(), -1, position);
 }
 
 //load the levels for the game
-int GameWorld::load_levels() {
+int GameWorld::loadLevels() {
 	game_levels.LoadLevels();
 
 	return 0;
 }
 
 //handle to read models.txt and load models in parallel
-int GameWorld::load_models() {
-	string ship_model = "enemy.obj";
-	string sky_model = "sky.obj";
-	string sun_model = "sun.obj";
-	string small_island_model = "small-island.obj";
-	string medium_island_model = "medium-island.obj";
-	string large_island_model = "large-island.obj";
-	string bullet_model = "bullet.obj";
-	string missile_model = "missile.obj";
-	string super_missile_model = "super-missile.obj";
-	string weapon_model = "weapon.obj";
-	string canon_model = "canon.obj";
+int GameWorld::loadModels(string& models_file) {
+	int number_of_models = 0;
+	string current_model;
+	string current_model_file_location = "bin/models/";
+	current_model_file_location.append(models_file);
+	fstream model_loader;
 
-	ship.LoadModel(ship_model);
-	sky.LoadModel(sky_model);
-	sun.LoadModel(sun_model);
-	small_island.LoadModel(small_island_model);
-	medium_island.LoadModel(medium_island_model);
-	large_island.LoadModel(large_island_model);
-	bullet.LoadModel(bullet_model);
-	missile.LoadModel(missile_model);
-	super_missile.LoadModel(super_missile_model);
-	weapon.LoadModel(weapon_model);
-	canon.LoadModel(canon_model);
+	model_loader.open(current_model_file_location, ios::in);
+
+	if(!model_loader) {
+		return 1;
+	}
+
+	//ignore first line
+	model_loader.ignore(1024, '\n');
+
+	models = new vector<string>;
+
+	while(!model_loader.eof()) {
+		model_loader >> current_model;
+		current_model = current_model.substr(0, current_model.find('.'));
+		models->push_back(current_model);
+	}
+
+	model_loader.close();
+
+	//number_of_models = models->size();
+	//model_display_list = new vector<GLuint>;
+	
+	//load the model into a call list
+
+	model.LoadModel(models);
+
+	return 0;
+}
+
+int GameWorld::loadMaterials(string& materials_file) {
+	int number_of_materials = 0;
+	string current_material;
+	string current_material_file_location = "bin/models/";
+	current_material_file_location.append(materials_file);
+	fstream material_loader;
+
+	material_loader.open(current_material_file_location, ios::in);
+
+	if(!material_loader) {
+		return 1;
+	}
+
+	//ignore first line
+	material_loader.ignore(1024, '\n');
+
+	materials = new vector<string>;
+
+	while(!material_loader.eof()) {
+		material_loader >> current_material;
+		materials->push_back(current_material);
+	}
+
+	material_loader.close();
+
+	//number_of_materials = materials->size();
+
+	model.LoadMaterials(materials);
+
+	return 0;
+}
+
+int GameWorld::generateModelLists() {
+	model_display_list = new vector<GLuint>;
+
+	model.GenerateModelDisplayList(model_display_list, texture_images, texture_file_names);
 
 	return 0;
 }
 
 //read the texture file and load all the textures
-int GameWorld::load_textures(string& texture_file) {
+int GameWorld::loadTextures(string& texture_file) {
+	TextureLoader textures;
 	int number_of_textures = 0;
 	string texture_file_name;
+	string texture_file_location = "bin/images/";
+	texture_file_location.append(texture_file);
 	fstream texture_loader;
 
-	texture_loader.open(texture_file, ios::in);
+	texture_loader.open(texture_file_location, ios::in);
 
 	if(!texture_loader) {
 		return 1;
 	}
 
 	texture_loader.ignore(1024, '\n');
-	texture_loader >> number_of_textures;
 
-	texture_file_names = new string[number_of_textures];
-	texture_images = new GLuint[number_of_textures];
-
-	for(int i = 0; i < number_of_textures; i++) {
+	texture_file_names = new vector<string>;
+	
+	while(!texture_loader.eof()) {
 		texture_loader >> texture_file_name;
-		texture_file_names[i] = texture_file_name;
+		texture_file_names->push_back(texture_file_name);
 	}
 
+	texture_loader.close();
+
+	number_of_textures = texture_file_names->size();
+	texture_images = new GLuint[number_of_textures];
 	textures.LoadTextures(texture_file_names, number_of_textures, texture_images);
 
 	return 0;
@@ -785,37 +777,11 @@ int GameWorld::load_textures(string& texture_file) {
 
 //create and generate all display lists
 void GameWorld::create_call_lists() {
-	//create the model display lists
-	ship_list = glGenLists(1);
-	sky_list = glGenLists(1);
-	sun_list = glGenLists(1);
-	small_island_list = glGenLists(1);
-	medium_island_list = glGenLists(1);
-	large_island_list = glGenLists(1);
-	bullet_list = glGenLists(1);
-	missile_list = glGenLists(1);
-	super_missile_list = glGenLists(1);
-	weapon_list = glGenLists(1);
-	canon_list = glGenLists(1);
-
 	//create the shader display lists
 	water_shader_list = glGenLists(1);
 
-	//generate all the model display lists
-	generate_model_display_list(ship, ship_list);
-	generate_model_display_list(sky, sky_list);
-	generate_model_display_list(sun, sun_list);
-	generate_model_display_list(small_island, small_island_list);
-	generate_model_display_list(medium_island, medium_island_list);
-	generate_model_display_list(large_island, large_island_list);
-	generate_model_display_list(bullet, bullet_list);
-	generate_model_display_list(missile, missile_list);
-	generate_model_display_list(super_missile, super_missile_list);
-	generate_model_display_list(weapon, weapon_list);
-	generate_model_display_list(canon, canon_list);
-
 	//shows the list of shaders to be used
-	string water_vertex_shader = "water_shader.vert";
+	string water_vertex_shader = "bin/shaders/water_shader.vert";
 	string water_fragment_shader = "";
 
 	//generate all the shader display lists
@@ -945,9 +911,9 @@ void GameWorld::initialize_islands() {
 
 	Island current_island;
 
-	Vertex island_location;
+	Vector island_location;
 
-	vector<Vertex>* game_island_coordinates = new vector<Vertex>();
+	vector<Vector>* game_island_coordinates = new vector<Vector>();
 	game_island_coordinates = game_levels.getIslandCoordiantes();
 	
 	for(int i = 0; i < total_islands; i++) {
@@ -969,7 +935,7 @@ void GameWorld::initialize_islands() {
 
 //initialize the ship
 void GameWorld::initialize_ship() {
-	Vertex player_location;
+	Vector player_location;
 
 	player_location.x = 0.0;
 	player_location.y = -10.0;
@@ -1038,7 +1004,7 @@ void GameWorld::calculate_fps(float dtime) {
 
 //uses a random number generator to update wind factor
 void GameWorld::update_wind_factor() {
-	float random_number = random_number_generator(1, 6, 0);
+	float random_number = random_number_generator(1, 4, 0);
 
 	wind_factor = random_number * 0.25;
 }
@@ -1061,7 +1027,7 @@ void GameWorld::generate_quad_islands() {
 }
 
 //perform the AI of the islands
-void GameWorld::perform_island_AI(Vertex& ship_location) {
+void GameWorld::perform_island_AI(Vector& ship_location) {
 	int start_defending = 0;
 	float defence_radius = 0.0f;
 
@@ -1070,7 +1036,7 @@ void GameWorld::perform_island_AI(Vertex& ship_location) {
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	Vertex island_location;
+	Vector island_location;
 
 	int total_islands = islands.size();
 
@@ -1084,23 +1050,23 @@ void GameWorld::perform_island_AI(Vertex& ship_location) {
 		
 		if (within_distance < overlap ) {
 			start_defending = 1;
-			Vertex weapon_location = island_location;
+			Vector weapon_location = island_location;
 			float current_weapon_rotation_angle;
 
 			islands.at(i).UpdateWeaponFire(true);
 
 			if(islands.at(i).getIslandType() == 'L') {
-				weapon_location.set_vertex(island_location.x + 10.0, 20.0, island_location.z - 4.0);
+				weapon_location.set_vector(island_location.x + 10.0, 20.0, island_location.z - 4.0);
 				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;
 				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
 				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
 			} else if(islands.at(i).getIslandType() == 'M') {
-				weapon_location.set_vertex(island_location.x + 6.0, 10.0, island_location.z - 2.0);				
+				weapon_location.set_vector(island_location.x + 6.0, 10.0, island_location.z - 2.0);				
 				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
 				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
 				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
 			} else {
-				weapon_location.set_vertex(island_location.x + 4.0, 5.0, island_location.z - 1.0);
+				weapon_location.set_vector(island_location.x + 4.0, 5.0, island_location.z - 1.0);
 				current_weapon_rotation_angle = atan2(weapon_location.z - ship_location.z, weapon_location.x - ship_location.x)*degree_conversion;			
 				//current_weapon_rotation_angle = 180 - current_weapon_rotation_angle;
 				islands.at(i).UpdateWeaponRotationAngle(current_weapon_rotation_angle);
@@ -1112,7 +1078,7 @@ void GameWorld::perform_island_AI(Vertex& ship_location) {
 }
 
 //detect collision of the ship with the island
-int GameWorld::detect_ship_collision(Vertex& ship_location) {
+int GameWorld::detect_ship_collision(Vector& ship_location) {
 	int collision = 0;
 
 	double collision_distance = 0.00000000000001;
@@ -1120,7 +1086,7 @@ int GameWorld::detect_ship_collision(Vertex& ship_location) {
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	Vertex island_location;
+	Vector island_location;
 
 	int total_islands = islands.size();
 
@@ -1139,7 +1105,7 @@ int GameWorld::detect_ship_collision(Vertex& ship_location) {
 }
 
 //detect collision of islands with the ammo
-int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_attack) {
+int GameWorld::detect_ammo_collision(Vector& ammo_location, int& island_under_attack) {
 	int collision = 0;
 	
 	float ammo_radius = 0.0;
@@ -1157,7 +1123,7 @@ int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_at
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	Vertex island_location;
+	Vector island_location;
 
 	int total_islands = islands.size();
 
@@ -1171,7 +1137,7 @@ int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_at
 		if (collision_distance < overlap ) {
 			collision = 1;
 			island_under_attack = i;
-			explosion_location = ammo_location;
+			explosion_location = islands.at(i).getLocation();
 		}
 	}
 	
@@ -1179,7 +1145,7 @@ int GameWorld::detect_ammo_collision(Vertex& ammo_location, int& island_under_at
 }
 
 //detects if the ammo from the island hit the ship
-int GameWorld::detect_ammo_ship_collision(Vertex& ship_location) {
+int GameWorld::detect_ammo_ship_collision(Vector& ship_location) {
 	int collision = 0;
 	
 	float island_ammo_radius = 0.6f;
@@ -1189,7 +1155,7 @@ int GameWorld::detect_ammo_ship_collision(Vertex& ship_location) {
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	Vertex ammo_location;
+	Vector ammo_location;
 
 	int total_islands = islands.size();
 
@@ -1209,7 +1175,7 @@ int GameWorld::detect_ammo_ship_collision(Vertex& ship_location) {
 }
 
 //detect collision with the power ups
-int GameWorld::detect_power_ups(Vertex& ship_location, int& location) {
+int GameWorld::detect_power_ups(Vector& ship_location, int& location) {
 	int collision = 0;
 	float power_up_radius = 0.6f;
 
@@ -1218,7 +1184,7 @@ int GameWorld::detect_power_ups(Vertex& ship_location, int& location) {
 	double radii_squared = 0.0;
 	double overlap = 0.0;
 
-	Vertex power_up_location;
+	Vector power_up_location;
 
 	int number_of_powerups = power_ups.size();
 
@@ -1268,7 +1234,7 @@ void GameWorld::reduce_island_health(int& island_number){
 				islands.at(island_number).UpdateHealth(health);
 			}
 		} else if(ammo_mode == 2) {
-			if(health == 5) {
+			if(health <= 10) {
 				health = 0;
 				glPushMatrix();
 				{
@@ -1281,7 +1247,7 @@ void GameWorld::reduce_island_health(int& island_number){
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
-				health -= 5;
+				health -= 10;
 				islands.at(island_number).UpdateHealth(health);
 			}
 		} else {
@@ -1321,7 +1287,7 @@ void GameWorld::reduce_island_health(int& island_number){
 				islands.at(island_number).UpdateHealth(health);
 			}
 		} else if(ammo_mode == 2) {
-			if(health <= 10) {
+			if(health <= 15) {
 				health = 0;
 				glPushMatrix();
 				{
@@ -1334,7 +1300,7 @@ void GameWorld::reduce_island_health(int& island_number){
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
 			} else {
-				health -= 10;
+				health -= 15;
 				islands.at(island_number).UpdateHealth(health);
 			}
 		} else {
@@ -1513,8 +1479,20 @@ void GameWorld::update_rain() {
 }
 
 //draw the models by calling the display list
-void GameWorld::draw_model(GLuint& model_list) {
+void GameWorld::draw_model(GLuint model_list) {
 	glCallList(model_list);
+}
+
+//get the display list id for the requested model
+GLuint GameWorld::getDisplayListId(const char* model_name) {
+	string current_model = model_name;
+	int display_list_index = 0;
+
+	while(current_model.compare(models->at(display_list_index)) != 0) {
+		display_list_index++;
+	}
+
+	return model_display_list->at(display_list_index);
 }
 
 //draw the entire game world
@@ -1522,7 +1500,7 @@ void GameWorld::draw_world() {
 	//draw the ship
 	glPushMatrix();
 	{
-		glTranslatef(0.0, ship_bounce, 0.0);
+		glTranslatef(0.0, -ship_bounce, 0.0);
 		draw_ship();
 	}
 	glPopMatrix();
@@ -1546,7 +1524,7 @@ void GameWorld::draw_world() {
 		int health_value = player_ship.getHealth();
 		if(ammo_mode != 2) {
 			glRotatef(-17, 1.0, 0.0, 0.0);
-			glTranslatef(-2.4, -1.5, 4.9);
+			glTranslatef(-2.5, -1.5, 7.85);
 		} else {
 			glRotatef(17, 1.0, 0.0, 0.0);
 			glTranslatef(-4.0, 0.2, 0.20);
@@ -1557,55 +1535,59 @@ void GameWorld::draw_world() {
 
 	//display frames per second on top right corner
 	FTPoint fps_text_position(window_width*0.88, window_height*0.95);
-	load_text("FPS:", fps_text_position, 24);
+	load_text("FPS:", fps_text_position);
 
 	FTPoint fps_value_position(window_width*0.94, window_height*0.95);
 	string frames = intToString(fps);
-	load_text(frames, fps_value_position, 24);
+	load_text(frames, fps_value_position);
 
 	//display ammo in centre bottom corner
 	FTPoint ammo_text_position(window_width*0.55, window_height*0.05);
-	load_text("Ammo", ammo_text_position, 24);
+	load_text("Ammo", ammo_text_position);
 
 	FTPoint missile_text_position(window_width*0.62, window_height*0.05);
-	load_text("M:", missile_text_position, 24);
+	load_text("M:", missile_text_position);
 
 	FTPoint missile_value_position(window_width*0.65, window_height*0.05);
 	string missiles = intToString(player_ship.player_ammo.missiles);
-	load_text(missiles, missile_value_position, 24);
+	load_text(missiles, missile_value_position);
 
 	FTPoint bullet_text_position(window_width*0.70, window_height*0.05);
-	load_text("SB:", bullet_text_position, 24);
+	load_text("SB:", bullet_text_position);
 
 	FTPoint bullet_value_position(window_width*0.73, window_height*0.05);
 	string bullets = intToString(player_ship.player_ammo.sniper_bullets);
-	load_text(bullets, bullet_value_position, 24);
+	load_text(bullets, bullet_value_position);
 
 	FTPoint super_missile_text_position(window_width*0.77, window_height*0.05);
-	load_text("SM:", super_missile_text_position, 24);
+	load_text("SM:", super_missile_text_position);
 
 	FTPoint super_missile_value_position(window_width*0.80, window_height*0.05);
 	string super_missiles = intToString(player_ship.player_ammo.super_missiles);
-	load_text(super_missiles, super_missile_value_position, 24);
-
-	//display text when power up picked up centre mid screen
-	if(sniper_bullet_collected && glfwGetTime() - sniper_collected_time < 2.0) {
-		FTPoint sniper_collected_text_position(window_width*0.3, window_height*0.5);
-		load_text("Sniper Bullet Collected", sniper_collected_text_position, 34);
-	}
-
-	if(super_missile_collected && glfwGetTime() - super_missile_collected_time < 2.0) {
-		FTPoint super_missile_collected_text_position(window_width*0.30, window_height*0.5);
-		load_text("Super Missile Collected", super_missile_collected_text_position, 34);
-	}
+	load_text(super_missiles, super_missile_value_position);
 
 	//display score text
 	FTPoint score_text_position(window_width*0.88, window_height*0.05);
-	load_text("Score", score_text_position, 24);
+	load_text("Score", score_text_position);
 
 	FTPoint score_value_position(window_width*0.96, window_height*0.05);
 	string score = intToString(player_ship.getCurrentScore());
-	load_text(score, score_value_position, 24);
+	load_text(score, score_value_position);
+
+	//display text when power up picked up centre mid screen
+	if(sniper_bullet_collected && glfwGetTime() - sniper_collected_time < 2.0) {
+		setFontSize(34);
+		FTPoint sniper_collected_text_position(window_width*0.3, window_height*0.5);
+		load_text("Sniper Bullet Collected", sniper_collected_text_position);
+		setFontSize(24);
+	}
+
+	if(super_missile_collected && glfwGetTime() - super_missile_collected_time < 2.0) {
+		setFontSize(34);
+		FTPoint super_missile_collected_text_position(window_width*0.30, window_height*0.5);
+		load_text("Super Missile Collected", super_missile_collected_text_position);
+		setFontSize(24);
+	}
 }
 
 //draw the sky, sun and clouds
@@ -1615,7 +1597,7 @@ void GameWorld::draw_top_world() {
 	{	
 		glScalef(5, 5, 5);
 		glTranslatef(0, -2, 0);
-		draw_model(sky_list);
+		draw_model(getDisplayListId("sky"));
 	}
 	glPopMatrix();
 	
@@ -1632,7 +1614,7 @@ void GameWorld::draw_top_world() {
 		glTranslatef(sun_starting_x, sun_starting_y, sun_starting_z);
 		glRotatef(sun_rotation_angle, 0.0, 1.0, 0.0);
 		glRotatef(sun_starting_angle, 1.0, 0.0, 0.0);
-		draw_model(sun_list);
+		draw_model(getDisplayListId("sun"));
 	}
 	glPopMatrix();
 
@@ -1757,7 +1739,7 @@ void GameWorld::draw_water() {
 		glNewList(water_list, GL_COMPILE);
 			water_texture = "blue_water.tga";
 			int texture_index = 0;
-			while(water_texture.compare(texture_file_names[texture_index]) != 0) {
+			while(water_texture.compare(texture_file_names->at(texture_index)) != 0) {
 				texture_index++;
 			}
 
@@ -1794,14 +1776,15 @@ void GameWorld::draw_islands() {
 	int total_islands = islands.size();
 
 	for(int i = 0; i < total_islands; i++) {
-		Vertex island_location = islands.at(i).getLocation();
+		Vector island_location = islands.at(i).getLocation();
 
 		if(islands.at(i).getIslandType() == 'L') {
 			//draw large islands
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x, island_location.y, island_location.z);
-				draw_model(large_island_list);
+				glScalef(1.67, 1.55, 1.67);
+				draw_model(getDisplayListId("island"));
 			}
 			glPopMatrix();
 			
@@ -1813,7 +1796,7 @@ void GameWorld::draw_islands() {
 				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
 				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
-				draw_model(weapon_list);
+				draw_model(getDisplayListId("weapon"));
 			}
 			glPopMatrix();		
 		} else if(islands.at(i).getIslandType() == 'M') {
@@ -1821,7 +1804,7 @@ void GameWorld::draw_islands() {
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x, island_location.y, island_location.z);
-				draw_model(medium_island_list);
+				draw_model(getDisplayListId("island"));
 			}
 			glPopMatrix();
 			
@@ -1833,7 +1816,7 @@ void GameWorld::draw_islands() {
 				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
 				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
-				draw_model(weapon_list);
+				draw_model(getDisplayListId("weapon"));
 			}
 			glPopMatrix();			
 		} else if(islands.at(i).getIslandType() == 'S') {
@@ -1841,7 +1824,8 @@ void GameWorld::draw_islands() {
 			glPushMatrix();
 			{	
 				glTranslatef(island_location.x, island_location.y, island_location.z);
-				draw_model(small_island_list);
+				glScalef(0.67, 0.75, 0.67);
+				draw_model(getDisplayListId("island"));
 			}
 			glPopMatrix();
 			
@@ -1853,7 +1837,7 @@ void GameWorld::draw_islands() {
 				weapon_rotation_angle = 180 - weapon_rotation_angle;
 
 				glRotatef(weapon_rotation_angle, 0.0, 1.0, 0.0);
-				draw_model(weapon_list);
+				draw_model(getDisplayListId("weapon"));
 			}
 			glPopMatrix();			
 		} 
@@ -1865,7 +1849,7 @@ void GameWorld::draw_ship() {
 	glPushMatrix();
 	{
 		glScalef(0.25, 0.25, 0.25);
-		draw_model(ship_list);
+		draw_model(getDisplayListId("enemy"));
 	}
 	glPopMatrix();
 }
@@ -1895,7 +1879,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 					glTranslatef(current_ammo_location.x, current_ammo_location.y, current_ammo_location.z);
 					glRotatef(angle, 0.0, 1.0, 0.0);
 					glScalef(1.0 + scaling_factor, 1.0 + scaling_factor, 1.0 + scaling_factor);
-					draw_model(missile_list);
+					draw_model(getDisplayListId("missile"));
 				}
 				glPopMatrix();
 			} else {
@@ -1908,7 +1892,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 					glTranslatef(current_ammo_location.x, current_ammo_location.y, current_ammo_location.z);
 					glRotatef(angle, 0.0, 1.0, 0.0);
 					glScalef(1.0 + scaling_factor, 1.0 + scaling_factor, 1.0 + scaling_factor);
-					draw_model(missile_list);
+					draw_model(getDisplayListId("missile"));
 				}
 				glPopMatrix();
 			}
@@ -1927,7 +1911,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 				glTranslatef(current_ammo_location.x, current_ammo_location.y, current_ammo_location.z);
 				glRotatef(angle, 0.0, 1.0, 0.0);
 				glScalef(0.5 + scaling_factor, 0.5 + scaling_factor, 0.5 + scaling_factor);
-				draw_model(bullet_list);
+				draw_model(getDisplayListId("bullet"));
 			}
 			glPopMatrix();
 		} else if(ammo_mode == 3  && shot_fired == true && current_super_missile_numbers > 0) {	
@@ -1945,7 +1929,7 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 				glTranslatef(current_ammo_location.x, current_ammo_location.y, current_ammo_location.z);
 				glRotatef(angle, 0.0, 1.0, 0.0);
 				glScalef(1.0 + scaling_factor, 1.0 + scaling_factor, 1.0 + scaling_factor);
-				draw_model(super_missile_list);
+				draw_model(getDisplayListId("super-missile"));
 			}
 			glPopMatrix();
 		}
@@ -1958,7 +1942,7 @@ void GameWorld::draw_island_ammo() {
 	float weapon_rotation_angle;
 	float weapon_rotation_angle_down = 0.0;
 	float hyp = 0.0;
-	Vertex current_island_ammo_location;
+	Vector current_island_ammo_location;
 
 	if(!ammo_ship_collision) {
 		for(int i = 0; i < total_islands; i++) {
@@ -1994,7 +1978,7 @@ void GameWorld::draw_island_ammo() {
 					glTranslatef(current_island_ammo_location.x, current_island_ammo_location.y, current_island_ammo_location.z);
 					glRotatef(-weapon_rotation_angle_down, 0.0, 0.0, 1.0);
 					glScalef(1.0 + scaling_factor, 1.0 + scaling_factor, 1.0 + scaling_factor);
-					draw_model(canon_list);
+					draw_model(getDisplayListId("canon"));
 				}
 				glPopMatrix();
 			}
@@ -2014,7 +1998,7 @@ void GameWorld::draw_health_bar(int& health, float scale) {
 	int texture_index = 0;
 
 	glPolygonMode(GL_FRONT, GL_FILL);
-	while(health_icon.compare(texture_file_names[texture_index]) != 0) {
+	while(health_icon.compare(texture_file_names->at(texture_index)) != 0) {
 			texture_index++;
 	}
 	health_icon_index = texture_index;
@@ -2030,21 +2014,21 @@ void GameWorld::draw_health_bar(int& health, float scale) {
 	
 	if(health_value <= 2*scale) {
 		//glColor3f(1.0, 0.0, 0.0);
-		while(red_color.compare(texture_file_names[texture_index]) != 0) {
+		while(red_color.compare(texture_file_names->at(texture_index)) != 0) {
 			texture_index++;
 		}
 		red_color_index = texture_index;
 		glBindTexture(GL_TEXTURE_2D, texture_images[red_color_index]);
 	} else if(health_value <= 4*scale) {
 		//glColor3f(1.0, 1.0, 0.0);
-		while(yellow_color.compare(texture_file_names[texture_index]) != 0) {
+		while(yellow_color.compare(texture_file_names->at(texture_index)) != 0) {
 			texture_index++;
 		}
 		yellow_color_index = texture_index;
 		glBindTexture(GL_TEXTURE_2D, texture_images[yellow_color_index]);
 	} else {
 		//glColor3f(0.0, 1.0, 0.0);
-		while(green_color.compare(texture_file_names[texture_index]) != 0) {
+		while(green_color.compare(texture_file_names->at(texture_index)) != 0) {
 			texture_index++;
 		}
 		green_color_index = texture_index;
@@ -2087,7 +2071,7 @@ void GameWorld::draw_island_health(float scale) {
 	float health_value;
 	string red_color = "red-color.tga", yellow_color = "yellow-color.tga", green_color = "green-color.tga";
 	string health_icon = "health.tga";
-	Vertex health_bar_translation;
+	Vector health_bar_translation;
 
 	int red_color_index = 0, yellow_color_index = 0, green_color_index = 0;
 	int health_icon_index = 0;
@@ -2098,13 +2082,21 @@ void GameWorld::draw_island_health(float scale) {
 		if(islands.at(i).isUnderAttack() == true) {
 			health_value = ((float)islands.at(i).getHealth()/10)*(scale);
 			health_bar_translation = islands.at(i).getLocation();
+			
+			if(islands.at(i).getIslandType() == 'L') {
+				glTranslatef(health_bar_translation.x, 22.0, health_bar_translation.z);
+			} else if(islands.at(i).getIslandType() == 'M') {
+				glTranslatef(health_bar_translation.x, 15.0, health_bar_translation.z);
+			} else {
+				glTranslatef(health_bar_translation.x, 10.0, health_bar_translation.z);
+			}
 
-			glTranslatef(health_bar_translation.x, 10.0, health_bar_translation.z);
+			glRotatef(-scene_rotation, 0.0, 1.0, 0.0);
 
 			glPushMatrix();
 			{
 				glPolygonMode(GL_FRONT, GL_FILL);
-				while(health_icon.compare(texture_file_names[texture_index]) != 0) {
+				while(health_icon.compare(texture_file_names->at(texture_index)) != 0) {
 						texture_index++;
 				}
 				health_icon_index = texture_index;
@@ -2120,21 +2112,21 @@ void GameWorld::draw_island_health(float scale) {
 	
 				if(health_value <= 2*scale) {
 					//glColor3f(1.0, 0.0, 0.0);
-					while(red_color.compare(texture_file_names[texture_index]) != 0) {
+					while(red_color.compare(texture_file_names->at(texture_index)) != 0) {
 						texture_index++;
 					}
 					red_color_index = texture_index;
 					glBindTexture(GL_TEXTURE_2D, texture_images[red_color_index]);
 				} else if(health_value <= 4*scale) {
 					//glColor3f(1.0, 1.0, 0.0);
-					while(yellow_color.compare(texture_file_names[texture_index]) != 0) {
+					while(yellow_color.compare(texture_file_names->at(texture_index)) != 0) {
 						texture_index++;
 					}
 					yellow_color_index = texture_index;
 					glBindTexture(GL_TEXTURE_2D, texture_images[yellow_color_index]);
 				} else {
 					//glColor3f(0.0, 1.0, 0.0);
-					while(green_color.compare(texture_file_names[texture_index]) != 0) {
+					while(green_color.compare(texture_file_names->at(texture_index)) != 0) {
 						texture_index++;
 					}
 					green_color_index = texture_index;
@@ -2178,7 +2170,7 @@ void GameWorld::draw_island_health(float scale) {
 //draws the power ups
 void GameWorld::draw_powerups() {
 	int number_of_powerups = power_ups.size();
-	Vertex location;
+	Vector location;
 
 	for(int i = 0; i < number_of_powerups; i++) {
 		location = power_ups.at(i).power_up_locations;
@@ -2205,7 +2197,7 @@ void GameWorld::draw_smoke() {
 	string smoke_texture;
 	smoke_texture = "smoke.tga";
 	int texture_index = 0;
-	while(smoke_texture.compare(texture_file_names[texture_index]) != 0) {
+	while(smoke_texture.compare(texture_file_names->at(texture_index)) != 0) {
 		texture_index++;
 	}
 
@@ -2243,7 +2235,7 @@ void GameWorld::draw_explosion() {
 	string explosion_texture;
 	explosion_texture = "explosion.tga";
 	int texture_index = 0;
-	while(explosion_texture.compare(texture_file_names[texture_index]) != 0) {
+	while(explosion_texture.compare(texture_file_names->at(texture_index)) != 0) {
 		texture_index++;
 	}
 
@@ -2281,7 +2273,7 @@ void GameWorld::draw_missile_particles() {
 	string missile_particle_texture;
 	missile_particle_texture = "explosion.tga";
 	int texture_index = 0;
-	while(missile_particle_texture.compare(texture_file_names[texture_index]) != 0) {
+	while(missile_particle_texture.compare(texture_file_names->at(texture_index)) != 0) {
 		texture_index++;
 	}
 
@@ -2323,7 +2315,7 @@ void GameWorld::draw_clouds() {
 		glNewList(cloud_list, GL_COMPILE);
 			cloud_texture = "rain-clouds.tga";
 			int texture_index = 0;
-			while(cloud_texture.compare(texture_file_names[texture_index]) != 0) {
+			while(cloud_texture.compare(texture_file_names->at(texture_index)) != 0) {
 				texture_index++;
 			}
 
@@ -2360,7 +2352,7 @@ void GameWorld::draw_rain() {
 	string rain_texture;
 	rain_texture = "ice.tga";
 	int texture_index = 0;
-	while(rain_texture.compare(texture_file_names[texture_index]) != 0) {
+	while(rain_texture.compare(texture_file_names->at(texture_index)) != 0) {
 		texture_index++;
 	}
 

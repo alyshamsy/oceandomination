@@ -1,7 +1,7 @@
 #ifndef Ship_H
 #define Ship_H
 
-#include "Vertex.h"
+#include "Vector.h"
 
 #define ship_radius 4.0f
 #define missile_radius 0.5f
@@ -13,12 +13,12 @@ public:
 	Ship();
 	~Ship();
 
-	int InitializeShip(Vertex& location);
-	int UpdateShipLocation(Vertex& location);
+	int InitializeShip(Vector& location);
+	int UpdateShipLocation(Vector& location);
 	int UpdateHealth(int& current_health);
 	int UpdateScore(int& current_score);
 	
-	Vertex getLocation() { return location; }
+	Vector getLocation() { return location; }
 	int getHealth() { return health; }
 	
 	float getShipRadius() { return ship_radius; }
@@ -34,7 +34,7 @@ public:
 	} player_ammo;
 
 private:
-	Vertex location;
+	Vector location;
 	int health; 
 	int score;
 };

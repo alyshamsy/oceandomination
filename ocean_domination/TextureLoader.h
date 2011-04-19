@@ -3,6 +3,7 @@
 
 #include <GL/glfw.h>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -11,6 +12,7 @@ public:
 	TextureLoader();
 	~TextureLoader();
 
-	GLuint* LoadTextures(string* textures, int number_of_textures, GLuint* texture_image);
+	GLuint* LoadTextures(vector<string>* textures, int number_of_textures, GLuint* texture_image);
+	GLuint LoadTexture(string current_texture, GLuint &texture_image);
 };
 #endif

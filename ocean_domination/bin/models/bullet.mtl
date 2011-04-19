@@ -1,0 +1,23 @@
+# Material Count: 2
+newmtl None_bullet-gold.tga
+Ns 0
+Ka 0.800000 0.800000 0.800000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+Ni 1.000000
+d 1
+illum 2
+map_Kd bullet-gold.tga
+
+
+newmtl None_bullet-head.tga
+Ns 0
+Ka 0.800000 0.800000 0.800000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+Ni 1.000000
+d 1
+illum 2
+map_Kd bullet-head.tga
+
+

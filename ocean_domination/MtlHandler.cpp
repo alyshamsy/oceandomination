@@ -12,6 +12,7 @@ MtlHandler::MtlHandler() {
 	for(int i = 0; i < number_of_colors; i++)
 		Ks[i] = 0.0;
 	Ns =  0.0;
+	Ni = 0.0;
 	d = 0.0;
 	illum = 0;
 	map_Ka = "";

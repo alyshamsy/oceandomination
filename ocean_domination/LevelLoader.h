@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include "Vertex.h"
+#include "Vector.h"
 
 using namespace std;
 
@@ -17,7 +17,7 @@ public:
 	int LoadLevels();
 	
 	vector<string>* getLevelFileNames() { return level_files; }
-	vector<Vertex>* getIslandCoordiantes() { return island_coordinates; }
+	vector<Vector>* getIslandCoordiantes() { return island_coordinates; }
 	int getLargeIslandNumbers() { return number_large_islands; }
 	int getMediumIslandNumbers() { return number_medium_islands; }
 	int getSmallIslandNumbers() { return number_small_islands; }
@@ -27,7 +27,7 @@ private:
 
 	fstream level_reader;
 	vector<string>* level_files;
-	vector<Vertex>* island_coordinates;
+	vector<Vector>* island_coordinates;
 	
 	int number_large_islands;
 	int number_medium_islands;
