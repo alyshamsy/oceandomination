@@ -6,7 +6,7 @@ TextureLoader::TextureLoader() {
 TextureLoader::~TextureLoader() {
 }
 
-GLuint* TextureLoader::LoadTextures(vector<string>* textures, int number_of_textures, GLuint* texture_image) {
+void TextureLoader::LoadTextures(vector<string>* textures, int number_of_textures, GLuint* texture_image) {
 	glGenTextures(number_of_textures, texture_image); // Texture name generation
 
 	GLFWimage current_image;
@@ -22,12 +22,8 @@ GLuint* TextureLoader::LoadTextures(vector<string>* textures, int number_of_text
 			glBindTexture(GL_TEXTURE_2D, texture_image[i]); // Binding of texture name
 
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//	glTexImage2D(GL_TEXTURE_2D, 0, current_image.Format, current_image.Width, current_image.Height, 0, current_image.Format, GL_UNSIGNED_BYTE, current_image.Data); // Texture specification
-
-			//Create and use Mipmaps
-			glTexParameterf(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR); // Mipmap Linear Filtering
-			gluBuild2DMipmaps(GL_TEXTURE_2D, current_image.BytesPerPixel, current_image.Width, current_image.Height, current_image.Format, GL_UNSIGNED_BYTE, current_image.Data);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexImage2D(GL_TEXTURE_2D, 0, current_image.Format, current_image.Width, current_image.Height, 0, current_image.Format, GL_UNSIGNED_BYTE, current_image.Data); // Texture specification
 			
 		} else {
 			// Error occured
@@ -37,8 +33,6 @@ GLuint* TextureLoader::LoadTextures(vector<string>* textures, int number_of_text
 
 		glfwFreeImage(&current_image);
 	}
-
-	return texture_image;
 }
 
 GLuint TextureLoader::LoadTexture(string current_texture, GLuint &texture_image) {

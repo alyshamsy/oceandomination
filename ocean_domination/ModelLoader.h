@@ -7,7 +7,6 @@
 #include "Face.h"
 #include "MtlHandler.h"
 #include <GL/glfw.h>
-#include <GL/glext.h>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -44,7 +43,6 @@ private:
 	int array_size;
 
 	string TrimSpaces(string& current_line);
-	//int ParseModels(vector<string>* models, model current_model);
 
 public:
 	ModelLoader();
@@ -53,6 +51,5 @@ public:
 	int LoadModel(vector<string>* models);
 	int LoadMaterials(vector<string>* material_files);
 	int GenerateModelDisplayList(vector<GLuint>* model_display_list, GLuint* texture_images, vector<string>* texture_file_names);
-	int GenerateModelVBO(vector<GLuint>* model_vbo_id, GLuint* texture_images, vector<string>* texture_file_names);
 };
 #endif
