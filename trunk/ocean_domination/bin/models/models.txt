@@ -5,6 +5,7 @@ enemy.obj
 island.obj
 missile.obj
 sky.obj
+grey_sky.obj
 sun.obj
 super-missile.obj
 weapon.obj

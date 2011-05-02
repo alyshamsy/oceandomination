@@ -46,12 +46,13 @@ public:
 private:
 	//game window dimensions
 	int window_width, window_height;
+	int sniper_view_width, sniper_view_height;
 	float aspect_ratio;
 
 	//to calculate fps
 	float prev_fps_time, max_time_step, fps_time;
 	size_t fps_count, fps;
-
+	bool debug_draw;
 	//wind values in the world
 	float wind_factor;
 	
@@ -104,6 +105,10 @@ private:
 
 	//checks to see if the island has been hit
 	bool island_hit;
+	
+	bool damage;
+	bool explosion;
+	float explosion_time;
 
 	//checks to see if the ship has been hit
 	bool ship_hit;
@@ -129,19 +134,6 @@ private:
 	//Levels to be Loaded
 	LevelLoader game_levels;
 
-	//Models to be loaded
-	ModelLoader sky;
-	ModelLoader sun;
-	ModelLoader small_island;
-	ModelLoader medium_island;
-	ModelLoader large_island;
-	ModelLoader ship;
-	ModelLoader bullet;
-	ModelLoader missile;
-	ModelLoader super_missile;
-	ModelLoader weapon;
-	ModelLoader canon;
-
 	//Shaders to be loaded
 	ShaderLoader water_shader;
 
@@ -154,13 +146,14 @@ private:
 	GLuint missile_powerup_list;
 	GLuint flare_list;
 	GLuint cloud_list;
+	GLuint sniper_target_list;
+	GLuint sniper_meter_list;
 
 	//shader lists to be generated
 	GLuint water_shader_list;
 
 	//array to hold the water mesh
 	float mesh_dimensions[ mesh_size ][ mesh_size ][3];
-	float cloud_mesh[ mesh_size ][ mesh_size ][3];
 
 	//programs to be used for the shader
 	GLint water_shader_program;
@@ -209,6 +202,7 @@ private:
 	int generate_health_powerup_list();
 	int generate_missile_powerup_list();
 	int generate_flare_list();
+	int generate_sniper_hud_list();
 
 	int loadLevels();
 	int loadModels(string& models_file);
@@ -221,8 +215,8 @@ private:
 	void create_smoke();
 	void create_explosion();
 	void create_missile_particles();
-	void create_cloud_mesh();
 	void create_rain();
+	void create_trail_particles();
 
 	//Create game functionality
 	void initialize_lighting();
@@ -241,16 +235,18 @@ private:
 	int detect_power_ups(Vector& ship_location, int& location);
 	void reduce_island_health(int& island_number);
 	void reduce_ship_health();
+	
 	void update_score(int& island_number);
 	void update_lighting();
 	void update_smoke();
 	void update_explosion();
 	void update_missile_particles();
 	void update_rain();
+	void update_trail_particles();
 
 	//draw functionality
-	GLuint getDisplayListId(const char* model_name);
 	void draw_model(GLuint model_list);
+	void draw_model(const char* model_name);
 	void draw_top_world();
 	void draw_bottom_world();
 	void draw_water();
@@ -264,8 +260,9 @@ private:
 	void draw_smoke();
 	void draw_explosion();
 	void draw_missile_particles();
-	void draw_clouds();
 	void draw_rain();
+	void draw_trail_particles();
+	void draw_sniper_hud();
 };
 
 #endif

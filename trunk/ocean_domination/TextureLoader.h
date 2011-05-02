@@ -12,7 +12,7 @@ public:
 	TextureLoader();
 	~TextureLoader();
 
-	GLuint* LoadTextures(vector<string>* textures, int number_of_textures, GLuint* texture_image);
+	void LoadTextures(vector<string>* textures, int number_of_textures, GLuint* texture_image);
 	GLuint LoadTexture(string current_texture, GLuint &texture_image);
 };
 #endif

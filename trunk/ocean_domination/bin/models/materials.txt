@@ -5,6 +5,7 @@ enemy.mtl
 island.mtl
 missile.mtl
 sky.mtl
+grey_sky.mtl
 sun.mtl
 super-missile.mtl
 weapon.mtl

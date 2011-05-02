@@ -62,3 +62,12 @@ string intToString(int a) {
 
 	return output;
 }
+
+string floatToString(float a) {
+	string output;
+	stringstream out;
+	out << a;
+	output = out.str();
+
+	return output;
+}

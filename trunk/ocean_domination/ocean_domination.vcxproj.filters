@@ -54,6 +54,12 @@
     <ClCompile Include="Vector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Mutex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Threads.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h">
@@ -92,5 +98,43 @@
     <ClInclude Include="Vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Threads.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bin\images\textures.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\levels\levels.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\levels\default.level">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\models\materials.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\models\models.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\shaders\explosion.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\shaders\explosion.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\shaders\shaders.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\shaders\water_shader.vert">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\sounds\sounds.txt">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

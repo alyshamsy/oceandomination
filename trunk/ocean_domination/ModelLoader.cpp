@@ -365,197 +365,95 @@ int ModelLoader::GenerateModelDisplayList(vector<GLuint>* model_display_list, GL
 
 	for(int i = 0; i < number_of_models; i++) {
 		number_of_objects = game_models->at(i).objects.size();
-		if(number_of_objects != 0) {
-			for(int j = 0; j < number_of_objects; j++) {
-				model_call_list = glGenLists(1);
+		
+		model_call_list = glGenLists(1);
 
-				glNewList(model_call_list, GL_COMPILE);
-					int start_value = game_models->at(i).start_index.at(j);
-					int end_value;
+		glNewList(model_call_list, GL_COMPILE);
+			int start_value = game_models->at(i).start_index.at(0);
+			int end_value = game_models->at(i).end_index;
 
-					if(j < number_of_objects - 1) 
-						end_value = game_models->at(i).start_index.at(j + 1);
-					else
-						end_value = game_models->at(i).end_index;
-
-					for(int k = start_value; k < end_value; k++) {
-						//load materials and bind textures
-						//if the current material is the same as in previous iteration do not relaoad the material values
-						if(current_material.compare(game_models->at(i).faces.at(k).texture_material) != 0) {
-							current_material = game_models->at(i).faces.at(k).texture_material;
-							if(current_material.compare("(null)") != 0) {
-								int material_index = 0;
-								while(current_material.compare(materials->at(material_index).newmtl) != 0)
-									material_index++;
-
-								//assign material values
-								glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, materials->at(material_index).Ns);
-								glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &materials->at(material_index).Ka);
-								glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &materials->at(material_index).Kd);
-								glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &materials->at(material_index).Ks);
-
-								//bind texture
-								current_texture = materials->at(material_index).map_Kd;
-								int texture_index = 0;
-								while(current_texture.compare(texture_file_names->at(texture_index)) != 0) {
-									texture_index++;
-								}
+			for(int k = start_value; k < end_value; k++) {
+				//load materials and bind textures
+				//if the current material is the same as in previous iteration do not relaoad the material values
+				if(current_material.compare(game_models->at(i).faces.at(k).texture_material) != 0) {
+					current_material = game_models->at(i).faces.at(k).texture_material;
 						
-								glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
-							}
-						}
-				
-						//load vectors
-				
-						int l = 0, vertex_index = 0, normals_index = 0, texture_index = 0, index = 0;
-						while(l < game_models->at(i).faces.at(k).face.size()) {
-							if(l%3 == 0) {
-								index = game_models->at(i).faces.at(k).face.at(l) - 1;
-						
-								vertex_vector[vertex_index][0] = game_models->at(i).vertices.at(index).x;
-								vertex_vector[vertex_index][1] = game_models->at(i).vertices.at(index).y;
-								vertex_vector[vertex_index][2] = game_models->at(i).vertices.at(index).z;
+					int material_index = 0;
+					while(current_material.compare(materials->at(material_index).newmtl) != 0)
+						material_index++;
 
-								vertex_index++;
-							} else if(l%3 == 1) {
-								index = game_models->at(i).faces.at(k).face.at(l) - 1;
+					//assign material values
+					glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, materials->at(material_index).Ns);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &materials->at(material_index).Ka);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &materials->at(material_index).Kd);
+					glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &materials->at(material_index).Ks);
 
-								texture_vector[texture_index][0] = game_models->at(i).texture_vertices.at(index).u;
-								texture_vector[texture_index][1] = game_models->at(i).texture_vertices.at(index).v;	
-
-								texture_index++;
-							} else if(l%3 == 2) {
-								index = game_models->at(i).faces.at(k).face.at(l) - 1;
-
-								normals_vector[normals_index][0] = game_models->at(i).normal_vertices.at(index).x;
-								normals_vector[normals_index][1] = game_models->at(i).normal_vertices.at(index).y;
-								normals_vector[normals_index][2] = game_models->at(i).normal_vertices.at(index).z;
-
-								normals_index++;
-							}
-							l++;
-						}
-
-						//draw the triangle
-						glBegin(GL_TRIANGLES);
-							//first point
-							glTexCoord2fv(texture_vector[0]);
-							glNormal3fv(normals_vector[0]);
-							glVertex3fv(vertex_vector[0]);
-							//second point
-							glTexCoord2fv(texture_vector[1]);
-							glNormal3fv(normals_vector[1]);
-							glVertex3fv(vertex_vector[1]);
-							//third point
-							glTexCoord2fv(texture_vector[2]);
-							glNormal3fv(normals_vector[2]);
-							glVertex3fv(vertex_vector[2]);
-						glEnd();
+					//bind texture
+					current_texture = materials->at(material_index).map_Kd;
+					int texture_index = 0;
+					while(current_texture.compare(texture_file_names->at(texture_index)) != 0) {
+						texture_index++;
 					}
-				glEndList();
-
-				model_display_list->push_back(model_call_list);
-			}
-		} else {
-			model_call_list = glGenLists(1);
-
-			glNewList(model_call_list, GL_COMPILE);
-				int start_value = game_models->at(i).start_index.at(0);
-				int end_value = game_models->at(i).end_index;
-
-				for(int k = start_value; k < end_value; k++) {
-					//load materials and bind textures
-					//if the current material is the same as in previous iteration do not relaoad the material values
-					if(current_material.compare(game_models->at(i).faces.at(k).texture_material) != 0) {
-						current_material = game_models->at(i).faces.at(k).texture_material;
-						if(current_material.compare("(null)") != 0) {
-							int material_index = 0;
-							while(current_material.compare(materials->at(material_index).newmtl) != 0)
-								material_index++;
-
-							//assign material values
-							glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, materials->at(material_index).Ns);
-							glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, (GLfloat*) &materials->at(material_index).Ka);
-							glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, (GLfloat*) &materials->at(material_index).Kd);
-							glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, (GLfloat*) &materials->at(material_index).Ks);
-
-							//bind texture
-							current_texture = materials->at(material_index).map_Kd;
-							int texture_index = 0;
-							while(current_texture.compare(texture_file_names->at(texture_index)) != 0) {
-								texture_index++;
-							}
 						
-							glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);
-						}
-					}
-				
-					//load vectors
-				
-					int l = 0, vertex_index = 0, normals_index = 0, texture_index = 0, index = 0;
-					while(l < game_models->at(i).faces.at(k).face.size()) {
-						if(l%3 == 0) {
-							index = game_models->at(i).faces.at(k).face.at(l) - 1;
-						
-							vertex_vector[vertex_index][0] = game_models->at(i).vertices.at(index).x;
-							vertex_vector[vertex_index][1] = game_models->at(i).vertices.at(index).y;
-							vertex_vector[vertex_index][2] = game_models->at(i).vertices.at(index).z;
-
-							vertex_index++;
-						} else if(l%3 == 1) {
-							index = game_models->at(i).faces.at(k).face.at(l) - 1;
-
-							texture_vector[texture_index][0] = game_models->at(i).texture_vertices.at(index).u;
-							texture_vector[texture_index][1] = game_models->at(i).texture_vertices.at(index).v;	
-
-							texture_index++;
-						} else if(l%3 == 2) {
-							index = game_models->at(i).faces.at(k).face.at(l) - 1;
-
-							normals_vector[normals_index][0] = game_models->at(i).normal_vertices.at(index).x;
-							normals_vector[normals_index][1] = game_models->at(i).normal_vertices.at(index).y;
-							normals_vector[normals_index][2] = game_models->at(i).normal_vertices.at(index).z;
-
-							normals_index++;
-						}
-						l++;
-					}
-
-					//draw the triangle
-					glBegin(GL_TRIANGLES);
-						//first point
-						glTexCoord2fv(texture_vector[0]);
-						glNormal3fv(normals_vector[0]);
-						glVertex3fv(vertex_vector[0]);
-						//second point
-						glTexCoord2fv(texture_vector[1]);
-						glNormal3fv(normals_vector[1]);
-						glVertex3fv(vertex_vector[1]);
-						//third point
-						glTexCoord2fv(texture_vector[2]);
-						glNormal3fv(normals_vector[2]);
-						glVertex3fv(vertex_vector[2]);
-					glEnd();
+					glBindTexture(GL_TEXTURE_2D, texture_images[texture_index]);			
 				}
-			glEndList();
+				
+				//load vectors
+				
+				int l = 0, vertex_index = 0, normals_index = 0, texture_index = 0, index = 0;
+				while(l < game_models->at(i).faces.at(k).face.size()) {
+					if(l%3 == 0) {
+						index = game_models->at(i).faces.at(k).face.at(l) - 1;
+						
+						vertex_vector[vertex_index][0] = game_models->at(i).vertices.at(index).x;
+						vertex_vector[vertex_index][1] = game_models->at(i).vertices.at(index).y;
+						vertex_vector[vertex_index][2] = game_models->at(i).vertices.at(index).z;
 
-			model_display_list->push_back(model_call_list);
-		}
+						vertex_index++;
+					} else if(l%3 == 1) {
+						index = game_models->at(i).faces.at(k).face.at(l) - 1;
+
+						texture_vector[texture_index][0] = game_models->at(i).texture_vertices.at(index).u;
+						texture_vector[texture_index][1] = game_models->at(i).texture_vertices.at(index).v;	
+
+						texture_index++;
+					} else if(l%3 == 2) {
+						index = game_models->at(i).faces.at(k).face.at(l) - 1;
+
+						normals_vector[normals_index][0] = game_models->at(i).normal_vertices.at(index).x;
+						normals_vector[normals_index][1] = game_models->at(i).normal_vertices.at(index).y;
+						normals_vector[normals_index][2] = game_models->at(i).normal_vertices.at(index).z;
+
+						normals_index++;
+					}
+					l++;
+				}
+
+				//draw the triangle
+				glBegin(GL_TRIANGLES);
+					//first point
+					glTexCoord2fv(texture_vector[0]);
+					glNormal3fv(normals_vector[0]);
+					glVertex3fv(vertex_vector[0]);
+					//second point
+					glTexCoord2fv(texture_vector[1]);
+					glNormal3fv(normals_vector[1]);
+					glVertex3fv(vertex_vector[1]);
+					//third point
+					glTexCoord2fv(texture_vector[2]);
+					glNormal3fv(normals_vector[2]);
+					glVertex3fv(vertex_vector[2]);
+				glEnd();
+			}
+		glEndList();
+
+		model_display_list->push_back(model_call_list);
 	}
 
 	delete_vector(vertex_vector, 3);
 	delete_vector(normals_vector, 3);
 	delete_vector(texture_vector, 3);
 
-	return 0;
-}
-
-int ModelLoader::GenerateModelVBO(vector<GLuint>* model_vbo_id, GLuint* texture_images, vector<string>* texture_file_names) {
-	int number_of_models = game_models->size();
-	GLuint vbo_id;
-
-
-	
 	return 0;
 }
 

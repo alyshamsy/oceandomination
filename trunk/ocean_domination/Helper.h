@@ -15,5 +15,6 @@ GLfloat random_number_generator(int low_bound, int high_bound, float seed);
 float getHypotenuse(float a, float b);
 float getSmallestValue(vector<float> arr, int& index);
 string intToString(int a);
+string floatToString(float a);
 
 #endif
