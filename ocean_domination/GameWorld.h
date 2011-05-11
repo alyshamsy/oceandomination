@@ -22,6 +22,7 @@
 #define radian_conversion 0.0174532925f
 #define degree_conversion 57.2957795785523f
 #define light_size 4
+#define INITIAL_TIME 180
 
 using namespace std;
 
@@ -43,6 +44,7 @@ public:
 
 	void setup_camera();
 
+	int getTextureValue(string& texture_name);
 private:
 	//game window dimensions
 	int window_width, window_height;
@@ -59,6 +61,10 @@ private:
 	//stores the current time elapsed since the start of the game
 	GLfloat start_time;
 	GLfloat current_time;
+
+	//level timer
+	int level_time;
+	int level_start_time;
 
 	//movement in the world
 	GLfloat x_position, y_position, z_position, rotation_value;
@@ -128,6 +134,10 @@ private:
 	int prev_time_light;
 	int current_time_light;
 
+	//game running variables
+	int exit;
+	bool start_game;
+
 	//variable to keep track of time when the sniper bullet was fired
 	GLfloat sniper_start_time;
 
@@ -148,6 +158,7 @@ private:
 	GLuint cloud_list;
 	GLuint sniper_target_list;
 	GLuint sniper_meter_list;
+	GLuint current_ammo_indicator_list;
 
 	//shader lists to be generated
 	GLuint water_shader_list;
@@ -244,11 +255,22 @@ private:
 	void update_rain();
 	void update_trail_particles();
 
+	//high scores functionality
+	int load_high_scores();
+	int save_high_scores();
+	int update_high_scores(string name, int score);
+
+	//display functionality methods
+	bool display_instructions();
+	int display_end_of_game_screen();
+	void pause_game();
+
 	//draw functionality
 	void draw_model(GLuint model_list);
 	void draw_model(const char* model_name);
 	void draw_top_world();
 	void draw_bottom_world();
+	void draw_hud();
 	void draw_water();
 	void draw_islands();
 	void draw_ship();
@@ -263,6 +285,7 @@ private:
 	void draw_rain();
 	void draw_trail_particles();
 	void draw_sniper_hud();
+	void draw_current_ammo();
 };
 
 #endif
