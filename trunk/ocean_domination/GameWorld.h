@@ -23,6 +23,7 @@
 #define degree_conversion 57.2957795785523f
 #define light_size 4
 #define INITIAL_TIME 180
+#define MAX_HIGH_SCORES 10
 
 using namespace std;
 
@@ -138,6 +139,10 @@ private:
 	int exit;
 	bool start_game;
 
+	//holds the name and the scores in the high scores file
+	string names[MAX_HIGH_SCORES];
+	int scores[MAX_HIGH_SCORES];
+
 	//variable to keep track of time when the sniper bullet was fired
 	GLfloat sniper_start_time;
 
@@ -247,6 +252,8 @@ private:
 	void reduce_island_health(int& island_number);
 	void reduce_ship_health();
 	
+	void reset_lighting();
+
 	void update_score(int& island_number);
 	void update_lighting();
 	void update_smoke();

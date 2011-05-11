@@ -1,6 +1,7 @@
 #include "GameWorld.h"
 #include "Threads.h"
 #include "Mutex.h"
+#include "Sound.h"
 #include <GL/glfw.h>
 #include <FTGL/ftgl.h>
 
@@ -9,11 +10,13 @@
 
 using namespace std;
 
+Sound game_sounds;
 GameWorld current_game;
 Mutex init_mutex;
 
 int window_width = 1280, window_height = 720;
 float aspect_ratio = (float)window_width/window_height;
+
 FTGLPixmapFont font("bin/fonts/calibrib.ttf");
 
 //initialize the game
@@ -25,8 +28,15 @@ void init() {
 		exit( EXIT_FAILURE );
 	}
 
+	int window_size = GLFW_FULLSCREEN;
+
+	if(MessageBox(NULL, "Would You Like To Run In Fullscreen Mode?", "Start FullScreen?", MB_YESNO|MB_ICONQUESTION) == IDNO)
+	{
+		window_size = GLFW_WINDOW;// Windowed Mode
+	}
+
 	// Open an OpenGL window in Full Screen mode
-	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW ) ) {
+	if( !glfwOpenWindow( window_width, window_height, 0, 0, 0, 0, 0, 0, window_size ) ) {
 		glfwTerminate();
 		exit( EXIT_FAILURE );
 	}
@@ -160,7 +170,7 @@ int menu() {
 	high_scores_button = current_game.getTextureValue(high_scores_button_image);
 	quit_button = current_game.getTextureValue(quit_button_image);
 
-	//game_sounds.setSoundSourcePosition(0.0, 0.0, 0.0);
+	game_sounds.setSoundSourcePosition(0.0, 0.0, 0.0);
 	while(selection_value == 0) {
 		if(!glfwGetWindowParam( GLFW_OPENED )) {
 			selection_value = 4;
@@ -253,11 +263,11 @@ int menu() {
 		glfwSwapBuffers();
 
 		if(glfwGetKey( GLFW_KEY_UP ) && glfwGetTime() - selection_time >= 0.25) {
-			//game_sounds.playSound("menu-change.wav");
+			game_sounds.playSound("menu-change.wav");
 			current_selection--;
 			selection_time = glfwGetTime();
 		} else if(glfwGetKey( GLFW_KEY_DOWN ) && glfwGetTime() - selection_time >= 0.25) {
-			//game_sounds.playSound("menu-change.wav");
+			game_sounds.playSound("menu-change.wav");
 			current_selection++;
 			selection_time = glfwGetTime();
 		}
@@ -501,7 +511,7 @@ int main() {
 	int game_end = 0;
 	int select_exit_value = 0;
 	bool create_world = false;
-
+	bool menu_sound = false;
 	//initialize the openGL window
 	//_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG)|_CRTDBG_LEAK_CHECK_DF);
 	
@@ -511,17 +521,17 @@ int main() {
 
 	// Main loop
 	while (running != 4) {
-		/*if(menu_sound == false) {
+		if(menu_sound == false) {
 			game_sounds.playSound("initial-sound.wav");
 			menu_sound = true;
-		}*/
+		}
 
 		running = menu();
 		select_exit_value = 0;
 
 		while( running == 1 ) {
-			//game_sounds.stopSound("initial-sound.wav");
-			//menu_sound = false;
+			game_sounds.stopSound("initial-sound.wav");
+			menu_sound = false;
 
 			if(create_world == false) {
 				//create a function to setup the world
@@ -550,19 +560,19 @@ int main() {
 		create_world = false;
 
 		if(running == 2) {
-			//game_sounds.stopSound("initial-sound.wav");
+			game_sounds.stopSound("initial-sound.wav");
 			running = game_controls();
 		}
 
 		if(running == 3) {
-			//game_sounds.stopSound("initial-sound.wav");
+			game_sounds.stopSound("initial-sound.wav");
 			running = high_scores();
 		}
 	}
 
 	//exit the openGL window
 	if(running == 4) {
-		//game_sounds.stopAllSounds();
+		game_sounds.stopAllSounds();
 		exit();
 	}
 	
