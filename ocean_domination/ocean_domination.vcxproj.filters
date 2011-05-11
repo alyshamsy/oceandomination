@@ -60,6 +60,9 @@
     <ClCompile Include="Threads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Sound.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Face.h">
@@ -104,6 +107,9 @@
     <ClInclude Include="Mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Sound.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="bin\images\textures.txt">
@@ -134,6 +140,9 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="bin\sounds\sounds.txt">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bin\levels\test.level">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

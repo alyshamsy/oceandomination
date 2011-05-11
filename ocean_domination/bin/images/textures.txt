@@ -44,3 +44,6 @@ begin_button.tga
 instructions.tga
 button.tga
 exit-box.tga
+failure.tga
+success.tga
+high-score-box.tga
