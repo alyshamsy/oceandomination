@@ -1,5 +1,9 @@
 #include "GameWorld.h"
 
+string keysPressed;
+void  GLFWCALL getInputs( int key, int action );
+void  GLFWCALL emptyCallBack( int key, int action );
+
 //Lighting values
 GLfloat ambient_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 GLfloat diffusive_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -45,9 +49,6 @@ GameWorld::GameWorld():font("bin/fonts/CAMBRIA.ttf") {
 	
 	//set the starting wind factor in the game (moves the waves)
 	wind_factor = 0.5;
-	
-	//set the start time
-	start_time = glfwGetTime();
 	
 	//initialize the world movement values
 	x_position = 0.0;
@@ -116,7 +117,12 @@ GameWorld::GameWorld():font("bin/fonts/CAMBRIA.ttf") {
 
 	sniper_start_time = 0.0;
 
+	level_time = INITIAL_TIME;
+
 	debug_draw = false;
+
+	exit = 1;
+	start_game = false;
 }
 
 GameWorld::~GameWorld() {
@@ -175,6 +181,85 @@ int GameWorld::InitializeGameWorld() {
 
 //creates the game world
 int GameWorld::CreateGameWorld() {
+	exit = 1;
+	start_game = false;
+
+	while(!start_game) {
+		start_game = display_instructions();
+	}
+
+	//set the starting wind factor in the game (moves the waves)
+	wind_factor = 0.5;
+	
+	//initialize the world movement values
+	x_position = 0.0;
+	y_position = -10.0;
+	z_position = 0.0;
+	rotation_value = 0.0;
+
+	total_x_position = 0.0;
+	total_z_position = 0.0;
+	total_rotation_value = 0.0;
+
+	//variables to draw movement in the world
+	scene_rotation = 0.0; 
+	side_movement = 0.0;
+	forward_movement = 0.0;
+	ship_bounce = 0.0;
+
+	weapon_movement_angle = 0.0;
+
+	translation_x = 0.0;
+	translation_y = 0.0;
+	translation_z = 0.0;
+	scaling_factor = 0.0;
+
+	weapon_translation_x = 0.0;
+	weapon_translation_y = 0.0;
+	weapon_translation_z = 0.0;
+	weapon_scaling_factor = 0.0;
+
+	missile_start_time = 0.0;
+	button_timeout = 0.0;
+
+	island_weapon_time = 0.0;
+
+	ammo_number = 0;
+
+	ammo_mode = 1;
+
+	ship_collision = 0;
+	ammo_collision = 0;
+	ammo_ship_collision = 0;
+	power_up_collision = 0;
+
+	island_under_attack = 0;
+
+	starting_total_islands = 0;
+
+	shot_fired = false;
+	fire_next_missile = false;
+	island_hit = false;
+	sniper_bullet_collected = false;
+	super_missile_collected = false;
+	
+	explosion = false;
+	damage = false;
+	explosion_time = 0.0;
+
+	sniper_collected_time = 0.0;
+	super_missile_collected_time = 0.0;
+
+	light_reduce = true;
+	prev_time_light = 0;
+	current_time_light = 0;
+
+	movement = 0;
+
+	sniper_start_time = 0.0;
+
+	level_time = INITIAL_TIME;
+
 	initialize_islands();
 	initialize_ship();
 	initialize_power_ups();
@@ -187,11 +272,42 @@ int GameWorld::CreateGameWorld() {
 
 	setFontSize(24);
 
+	//randomize lighting at the beginning
+	GLfloat initial_light_value = random_number_generator(0, 5, 0);
+	initial_light_value = initial_light_value/10.0 + 0.5;
+
+	ambient_light[0] = initial_light_value;
+	ambient_light[1] = initial_light_value;
+	ambient_light[2] = initial_light_value;
+
+	diffusive_light[0] = initial_light_value;
+	diffusive_light[1] = initial_light_value;
+	diffusive_light[2] = initial_light_value;
+
+	specular_light[0] = initial_light_value;
+	specular_light[1] = initial_light_value;
+	specular_light[2] = initial_light_value;
+
+	//set the start time
+	level_start_time = start_time = glfwGetTime();
+
+	//update the current ship location
+	current_ship_location.set_vector(0.0, 0.0, 0.0);
+	player_ship.UpdateShipLocation(current_ship_location);
+
 	return 0;
 }
 
 //updates the game world and detects collision
 int GameWorld::UpdateGameWorld() {
+	if(!glfwGetWindowParam( GLFW_OPENED )) {
+		return 4;
+	}
+
+	if(glfwGetKey( GLFW_KEY_ESC )) {
+		pause_game();
+	}
+
 	Vector next_ship_location = current_ship_location;
 	int location = 0;
 	float bounce_frequency = 0.0;
@@ -451,6 +567,16 @@ int GameWorld::UpdateGameWorld() {
 		}
 	}
 
+	//update the level timer
+	if (glfwGetTime() - level_start_time >= 1) {
+		level_time =  level_time + (int)level_start_time - int(glfwGetTime());
+		
+		if(level_time < 0){
+			level_time = 0;
+		}
+
+		level_start_time += 1;
+	}
 	
 	//dynamic lighting
 	update_lighting();
@@ -462,64 +588,16 @@ int GameWorld::UpdateGameWorld() {
 	update_rain();
 	update_trail_particles();
 	
-	if(player_ship.getHealth() == 0 ) {
-		return 1;
-	} else if(islands.size() == 0) {
-		return 2;
-	}
+	if(player_ship.getHealth() == 0 || level_time == 0 || islands.size() == 0) {
+		exit = display_end_of_game_screen();
+	} 
 
-	return 0;
+	return exit;
 }
 
 //restarts the game
 int GameWorld::RestartGame() {
 	return 0;
-}
-
-//sets up the camera
-void GameWorld::setup_camera() {
-	//single player view
-	glViewport(0,0, window_width, window_height);
-	glScissor(0,0, window_width, window_height);
-	glEnable(GL_SCISSOR_TEST);
-		
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-	//set up the camera and the viewport
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
-
-	glMatrixMode(GL_MODELVIEW);
-	if(ammo_mode != 2) {
-		glLoadIdentity();
-		glTranslatef(0.0, 0.0, -10.0);
-		glRotatef(17, 1.0, 0.0, 0.0);
-	} else if(ammo_mode == 2) {
-		glLoadIdentity();
-		glTranslatef(0.0, -2.5, -3.5);
-		glRotatef(-17, 1.0, 0.0, 0.0);
-	}
-
-	draw_world();
-
-	if(ammo_mode == 2) {
-		//2nd view
-		glViewport(440.0, 97.0, sniper_view_width, sniper_view_height);
-		glScissor(440.0, 97.0, sniper_view_width, sniper_view_height);
-		glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
-		glClear( GL_DEPTH_BUFFER_BIT );
-
-		//set up the camera and the viewport
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(75.0, 1.0, 1.0, 10000.0);
-
-		glMatrixMode(GL_MODELVIEW);
-
-		//transform for second player			
-		draw_viewport();
-	}
 }
 
 //generates the call lists for all the shaders used in the program
@@ -1467,7 +1545,7 @@ void GameWorld::update_score(int& island_number) {
 void GameWorld::update_lighting() {
 	current_time_light = (int)(glfwGetTime() - start_time);
 
-	if( (current_time_light % 30 == 0) && ( (current_time_light - prev_time_light) > 1)) {
+	if( (current_time_light % 10 == 0) && ( (current_time_light - prev_time_light) > 1)) {
 		float ambient_light_value = ambient_light[0];
 		float diffuse_light_value = diffusive_light[0];
 		float specular_light_value = specular_light[0];
@@ -1612,6 +1690,397 @@ void GameWorld::update_trail_particles() {
 	}
 }
 
+int GameWorld::getTextureValue(string& texture_name) {
+	int texture_index = 0;
+	while(texture_name.compare(texture_file_names->at(texture_index)) != 0) {
+			texture_index++;
+	}
+
+	return texture_images[texture_index];
+}
+
+int GameWorld::load_high_scores() {
+	//open the high scores file and load values into an array
+	string name, high_scores_file_name = "bin/high_scores.txt";
+	int score, i = 0;
+	fstream read_high_scores;
+
+	read_high_scores.open(high_scores_file_name, ios::in);
+	
+	if(!read_high_scores) {
+		return 1;
+	}
+
+	while(!read_high_scores.eof()) {
+		read_high_scores >> name >> score;
+
+		names[i] = name;
+		scores[i] = score;
+
+		i++;
+	}
+
+	read_high_scores.close();
+
+	return 0;
+}
+
+int GameWorld::save_high_scores() {
+	//open the high scores file and load values into an array
+	string name, high_scores_file_name = "bin/high_scores.txt";
+	int score, number_of_high_scores = 0;
+	ofstream save_high_scores;
+
+	save_high_scores.open(high_scores_file_name, ios::out);
+	
+	if(!save_high_scores) {
+		return 1;
+	}
+
+	for(int i = 0; i < MAX_HIGH_SCORES; i++) {
+		if(scores[i] == 0) {
+			number_of_high_scores = i;
+			break;
+		}
+	}
+
+	for(int i = 0; i < number_of_high_scores; i++) {
+		name = names[i];
+		score = scores[i];
+
+		if(i < number_of_high_scores - 1) {
+			save_high_scores << name << ' ' << score << endl;
+		} else {
+			save_high_scores << name << ' ' << score;
+		}
+	}
+
+	save_high_scores.close();
+
+	return 0;
+}
+
+int GameWorld::update_high_scores(string name, int score) {
+	string current_names[MAX_HIGH_SCORES];
+	int current_top_scores[MAX_HIGH_SCORES];
+
+	int current_rank = 0;
+
+	for(int i = 0; i < MAX_HIGH_SCORES; i++) {
+		current_names[i] = names[i];
+		current_top_scores[i] = scores[i];
+	}
+
+	for(int i = 0; i < MAX_HIGH_SCORES; i++) {
+		if(score >= current_top_scores[i]) {
+			current_rank = i;
+			break;
+		}
+	}
+
+	for(int i = 0; i < current_rank; i++) {
+		names[i] = current_names[i];
+		scores[i] = current_top_scores[i];
+	}
+
+	names[current_rank] = name;
+	scores[current_rank] = score;
+
+	for(int i = current_rank; i < MAX_HIGH_SCORES - 1; i++) {
+		names[i + 1] = current_names[i];
+		scores[i + 1] = current_top_scores[i];
+	}
+
+	return 0;
+}
+
+bool GameWorld::display_instructions() {
+	bool start = false;
+	int instructions, start_button;
+	double delay_time = glfwGetTime();
+
+	string instructions_image = "instructions.tga";
+	string start_button_image = "begin_button.tga";
+
+	instructions = getTextureValue(instructions_image);
+	start_button = getTextureValue(start_button_image);
+
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+
+	while(!start) {
+		if(!glfwGetWindowParam( GLFW_OPENED )) {
+			start = true;
+			exit = 4;
+		}
+
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(75.0, aspect_ratio, 1.0, 20000.0);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glTranslatef(0.0, 0.0, -5.0);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glBindTexture(GL_TEXTURE_2D, instructions);
+		glBegin(GL_QUADS);
+			glColor3f(1.0, 1.0, 1.0);
+			glTexCoord2f(0.0, 0.0);
+			glVertex3f(-5.0, -3.0, 0.0);
+			glTexCoord2f(0.0, 1.0);
+			glVertex3f(-5.0, 3.0, 0.0);
+			glTexCoord2f(1.0, 1.0);
+			glVertex3f(5.0, 3.0, 0.0);
+			glTexCoord2f(1.0, 0.0);
+			glVertex3f(5.0, -3.0, 0.0);
+		glEnd();   
+
+		glBindTexture(GL_TEXTURE_2D, start_button);
+		glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT);
+		glBegin(GL_QUADS);
+			glColor4f(1.0, 1.0, 0.0, 0.5);
+			glTexCoord2f(0.0, 0.0); glVertex3f(-1.75, -2.5, 0.25);			
+			glTexCoord2f(0.0, 1.0); glVertex3f(-1.75, -2.0, 0.25);			
+			glTexCoord2f(1.0, 1.0); glVertex3f(1.75, -2.0, 0.25);
+			glTexCoord2f(1.0, 0.0); glVertex3f(1.75, -2.5, 0.25);
+		glEnd();
+		glPopAttrib();
+
+		glfwSwapBuffers();
+
+		if(glfwGetKey( GLFW_KEY_ENTER ) && glfwGetTime() - delay_time >= 1.0) {
+			start = true;
+		}
+
+		glDisable(GL_BLEND);
+	}
+
+	return start;
+}
+
+int GameWorld::display_end_of_game_screen() {
+	int final_score = player_ship.getCurrentScore();
+
+	if(player_ship.getHealth() == 0 || level_time == 0) {
+		
+
+		return 0;
+	} else if(islands.size() == 0) {
+		FTPoint high_score_name_text_position((window_width*0.455), window_height*0.445);
+
+		FTPoint end_game_text_position((window_width*0.15), window_height*0.75);
+		FTPoint info_text_position((window_width*0.30), window_height*0.45);
+		FTPoint score_text_position((window_width*0.48), window_height*0.30);
+
+		glDisable(GL_LIGHTING);
+		glDisable(GL_TEXTURE_2D);
+			
+		//check the score and if it is a high score then ask for name and call update_high_scores
+		if(final_score > scores[MAX_HIGH_SCORES - 1]) {
+			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			//game_sound.increaseSoundVolume("tada.wav", 2.0);
+			//game_sound.playSound("tada.wav");
+
+			bool name_entered = false;
+			int high_score_name_box;
+			string high_score_name_box_image = "high-score-box.tga";
+			string high_score_name = "";
+
+			high_score_name_box = getTextureValue(high_score_name_box_image);
+
+			glfwSetKeyCallback(getInputs);
+
+			while(!name_entered) {
+				glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				glMatrixMode(GL_PROJECTION);
+				glLoadIdentity();
+				gluPerspective(75.0, aspect_ratio, 1.0, 20000.0);
+
+				glMatrixMode(GL_MODELVIEW);
+				glLoadIdentity();
+				glTranslatef(0.0, 0.0, -5.0);
+
+				glBindTexture(GL_TEXTURE_2D, high_score_name_box);
+				glBegin(GL_QUADS);
+					glColor3f(1.0, 1.0, 1.0);
+					glTexCoord2f(0.0, 0.0); glVertex3f(-2.5, -1.5, 0.0);			
+					glTexCoord2f(0.0, 1.0); glVertex3f(-2.5, 1.5, 0.0);			
+					glTexCoord2f(1.0, 1.0); glVertex3f(2.5, 1.5, 0.0);
+					glTexCoord2f(1.0, 0.0); glVertex3f(2.5, -1.5, 0.0);
+				glEnd();
+
+				high_score_name = keysPressed;
+				load_text(high_score_name, high_score_name_text_position);
+
+				glfwSwapBuffers();
+
+				if(glfwGetKey( GLFW_KEY_ENTER )) {
+					name_entered = true;
+				}
+			}
+			glfwSetKeyCallback(emptyCallBack);
+			update_high_scores(high_score_name, final_score);
+		}
+
+		//add fireworks particles and high score check
+		end_game_time = glfwGetTime();
+		string game_score = intToString(final_score);
+
+		while(glfwGetTime() - end_game_time <= 5.0) {
+			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			display_text("Congratulations!!!", end_game_text_position, 100);
+			display_text("You Bowled:", info_text_position, 75);
+			display_text(game_score, score_text_position, 75);
+
+			glfwSwapBuffers();
+		}
+
+		glEnable(GL_LIGHTING);
+		glEnable(GL_TEXTURE_2D);
+
+		save_high_scores();
+
+		//score timer
+		int added_score = 0;
+		while(level_time > 0) {
+			added_score +=  5 * (level_time + (int)level_start_time - int(glfwGetTime()));
+
+			//display the score ticker and end of game screen
+
+		}
+
+		return 0;
+	}
+}
+
+void GameWorld::pause_game() {
+	bool game_paused = true;
+
+	int select_exit_value = 0;
+	int exit_box;
+	int button;
+
+	double pause_time = glfwGetTime();
+	double selection_time = pause_time;
+
+	FTPoint paused_text_position((window_width*0.39), window_height*0.75);
+	FTPoint yes_text_position((window_width*0.410), window_height*0.385);
+	FTPoint no_text_position((window_width*0.565), window_height*0.385);
+
+	string exit_box_image = "exit-box.tga";
+	string button_image = "button.tga";
+
+	exit_box = getTextureValue(exit_box_image);
+	button = getTextureValue(button_image);
+
+	//game_sound.pauseAllSounds();
+
+	while(game_paused) {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glDisable(GL_LIGHTING);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(75.0, aspect_ratio, 1.0, 20000.0);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glTranslatef(0.0, 0.0, -5.0);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glBindTexture(GL_TEXTURE_2D, exit_box);
+		glBegin(GL_QUADS);
+			glColor3f(1.0, 1.0, 1.0);
+			glTexCoord2f(0.0, 0.0); glVertex3f(-2.25, -1.5, 0.0);			
+			glTexCoord2f(0.0, 1.0); glVertex3f(-2.25, 1.5, 0.0);			
+			glTexCoord2f(1.0, 1.0); glVertex3f(2.25, 1.5, 0.0);
+			glTexCoord2f(1.0, 0.0); glVertex3f(2.25, -1.5, 0.0);
+		glEnd();
+
+		glBindTexture(GL_TEXTURE_2D, button);
+		glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT);
+		glBegin(GL_QUADS);
+			glColor3f(1.0, 1.0, 1.0);
+			if(select_exit_value == 1) {
+				glColor4f(1.0, 1.0, 0.0, 0.5);
+			}
+			glTexCoord2f(0.0, 0.0); glVertex3f(-1.5, -1.0, 0.25);			
+			glTexCoord2f(0.0, 1.0); glVertex3f(-1.5, -0.5, 0.25);			
+			glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, -0.5, 0.25);
+			glTexCoord2f(1.0, 0.0); glVertex3f(-0.5, -1.0, 0.25);
+		glEnd();
+		glPopAttrib();
+
+		glBindTexture(GL_TEXTURE_2D, button);
+		glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT);
+		glBegin(GL_QUADS);
+			glColor3f(1.0, 1.0, 1.0);
+			if(select_exit_value == 0) {
+				glColor4f(1.0, 1.0, 0.0, 0.5);
+			}
+			glTexCoord2f(0.0, 0.0); glVertex3f(1.5, -1.0, 0.25);			
+			glTexCoord2f(0.0, 1.0); glVertex3f(1.5, -0.5, 0.25);			
+			glTexCoord2f(1.0, 1.0); glVertex3f(0.5, -0.5, 0.25);
+			glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -1.0, 0.25);
+		glEnd();
+		glPopAttrib();
+
+		glPixelTransferf(GL_RED_BIAS, 0.0f);
+		glPixelTransferf(GL_GREEN_BIAS, 0.0f);
+		glPixelTransferf(GL_BLUE_BIAS, 0.0f);
+
+		setFontSize(50);
+		load_text("Game Paused", paused_text_position);
+
+		setFontSize(24);
+		load_text("Yes", yes_text_position);
+		load_text("No", no_text_position);
+
+		glfwSwapBuffers();
+
+		if(glfwGetKey( GLFW_KEY_RIGHT ) && glfwGetTime() - selection_time >= 0.25) {
+			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			//game_sound.playSound("menu-change.wav");
+			select_exit_value = 0;
+			selection_time = glfwGetTime();
+		} else if(glfwGetKey( GLFW_KEY_LEFT ) && glfwGetTime() - selection_time >= 0.25) {
+			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			//game_sound.playSound("menu-change.wav");
+			select_exit_value = 1;
+			selection_time = glfwGetTime();
+		}
+
+		if(glfwGetKey( GLFW_KEY_ENTER ) && select_exit_value == 1) {
+			game_paused = false;
+			//game_sound.stopAllSounds();
+			exit = 0;
+		} else if(glfwGetKey( GLFW_KEY_ENTER ) && select_exit_value == 0) {
+			game_paused = false;
+
+			glEnable(GL_LIGHTING);
+			glDisable(GL_BLEND);
+
+			glfwSetTime(pause_time);
+
+			//game_sound.stopSound("menu-change.wav");
+			//game_sound.playAllSounds();
+		}
+
+		if(!glfwGetWindowParam( GLFW_OPENED )) {
+			exit = 4;
+		}
+	}
+}
+
 //draw the models by calling the display list
 void GameWorld::draw_model(const char* model_name) {
 	string current_model = model_name;
@@ -1632,6 +2101,51 @@ void GameWorld::draw_model(GLuint model_list) {
 	glCallList(model_list);
 }
 
+//sets up the camera
+void GameWorld::setup_camera() {
+	//single player view
+	glViewport(0,0, window_width, window_height);
+	glScissor(0,0, window_width, window_height);
+	glEnable(GL_SCISSOR_TEST);
+		
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+	//set up the camera and the viewport
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	if(ammo_mode != 2) {
+		glLoadIdentity();
+		glTranslatef(0.0, 0.0, -10.0);
+		glRotatef(17, 1.0, 0.0, 0.0);
+	} else if(ammo_mode == 2) {
+		glLoadIdentity();
+		glTranslatef(0.0, -2.5, -3.5);
+		glRotatef(-17, 1.0, 0.0, 0.0);
+	}
+
+	draw_world();
+
+	if(ammo_mode == 2) {
+		//2nd view
+		glViewport(440.0, 97.0, sniper_view_width, sniper_view_height);
+		glScissor(440.0, 97.0, sniper_view_width, sniper_view_height);
+		glEnable(GL_SCISSOR_TEST);// OpenGL rendering goes here ...
+		glClear( GL_DEPTH_BUFFER_BIT );
+
+		//set up the camera and the viewport
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(75.0, 1.0, 1.0, 10000.0);
+
+		glMatrixMode(GL_MODELVIEW);
+
+		//transform for second player			
+		draw_viewport();
+	}
+}
 
 //draw the entire game world
 void GameWorld::draw_world() {
@@ -1642,13 +2156,6 @@ void GameWorld::draw_world() {
 		draw_top_world();
 	}
 	glPopMatrix();
-
-	//draw rain
-	if(ambient_light[0] <= 0.5) {
-		glDisable(GL_LIGHTING);
-		draw_rain();
-		glEnable(GL_LIGHTING);
-	}
 	
 	glPushMatrix();
 	{
@@ -1656,22 +2163,6 @@ void GameWorld::draw_world() {
 		glTranslatef(side_movement, 0.0, forward_movement);
 		draw_bottom_world();
 		draw_ammo(shot_fired, ammo_number, rotation_value);
-	}
-	glPopMatrix();
-
-	//draw extras on screen
-	glPushMatrix();
-	{
-		//draw health bar in the bottom left corner
-		int health_value = player_ship.getHealth();
-		if(ammo_mode != 2) {
-			glRotatef(-17, 1.0, 0.0, 0.0);
-			glTranslatef(-2.5, -1.5, 7.85);
-		} else {
-			glRotatef(17, 1.0, 0.0, 0.0);
-			glTranslatef(-4.0, 0.2, 0.20);
-		}
-		draw_health_bar(health_value, 0.25);
 	}
 	glPopMatrix();
 
@@ -1690,6 +2181,67 @@ void GameWorld::draw_world() {
 	}
 	glPopMatrix();
 
+	//draw rain
+	if(ambient_light[0] <= 0.5) {
+		glDisable(GL_LIGHTING);
+		glPushMatrix();
+			if(ammo_mode != 2) {
+				glTranslatef(0.0, 0.0, 5.0);
+			}
+			draw_rain();
+		glPopMatrix();
+		glEnable(GL_LIGHTING);
+	}
+
+	//draw the game hud
+	draw_hud();
+}
+
+//display time, health bar, ammo numbers and debug values
+void GameWorld::draw_hud() {
+	//draw health bar on screen
+	glPushMatrix();
+	{
+		//draw health bar in the bottom left corner
+		int health_value = player_ship.getHealth();
+		if(ammo_mode != 2) {
+			glRotatef(-17, 1.0, 0.0, 0.0);
+			glTranslatef(-2.5, -1.5, 7.85);
+		} else {
+			glRotatef(17, 1.0, 0.0, 0.0);
+			glTranslatef(-4.0, 0.2, 0.20);
+		}
+		draw_health_bar(health_value, 0.25);
+	}
+	glPopMatrix();
+
+	glPushMatrix();
+	{
+		if(ammo_mode == 1) {
+			glRotatef(-17, 1.0, 0.0, 0.0);
+			glTranslatef(0.32, -0.715, 9.0);
+			glScalef(0.38, 0.13, 0.0);
+		} else if(ammo_mode == 2) {
+			glRotatef(17, 1.0, 0.0, 0.0);
+			glTranslatef(1.925, 0.0, 0.0);
+			glScalef(1.25, 0.5, 0.0);
+		} else {
+			glRotatef(-17, 1.0, 0.0, 0.0);
+			glTranslatef(0.736, -0.715, 9.0);
+			glScalef(0.38, 0.13, 0.0);
+		}
+		draw_current_ammo();
+	}
+	glPopMatrix();
+
+	//draw the time on the top of the screen
+	string timer = "Time: ";
+	FTPoint time_position( window_width * 0.5, window_height * 0.95);
+	char timeSTR [10];
+
+	timer += itoa(level_time, timeSTR, 10);
+	load_text(timer, time_position);
+
 	if(debug_draw) {
 		//display frames per second on top right corner
 		FTPoint fps_text_position(window_width*0.88, window_height*0.95);
@@ -1702,6 +2254,8 @@ void GameWorld::draw_world() {
 		FTPoint angle_text_position(window_width*0.78, window_height*0.95);
 		load_text(floatToString(scene_rotation), angle_text_position);
 	}
+
+	//draw the red line under the current ammo type
 
 	//display ammo in centre bottom corner
 	FTPoint ammo_text_position(window_width*0.55, window_height*0.05);
@@ -1849,7 +2403,7 @@ void GameWorld::draw_bottom_world() {
 	glPopMatrix();
 
 	//draw water with waves
-	glCallList(water_shader_list);
+	/*glCallList(water_shader_list);
 	
 	location_time = glGetUniformLocation(water_shader_program, "time");
 	glUniform1f(location_time, current_time);
@@ -1861,7 +2415,7 @@ void GameWorld::draw_bottom_world() {
 	glUniform1i(location_mov, movement);
 
 	location_ship = glGetUniformLocation(water_shader_program, "ship_location");
-	glUniform3fv(location_ship, 1, ship_location);
+	glUniform3fv(location_ship, 1, ship_location);*/
 
 	glPushMatrix();
 	{	
@@ -1869,7 +2423,7 @@ void GameWorld::draw_bottom_world() {
 		draw_water();
 	}
 	glPopMatrix();
-	water_shader.DetachShader(water_shader_program);
+	//water_shader.DetachShader(water_shader_program);
 
 	//draw islands ammo
 	glPushMatrix();
@@ -2082,7 +2636,8 @@ void GameWorld::draw_islands() {
 void GameWorld::draw_ship() {
 	glPushMatrix();
 	{
-		glScalef(0.25, 0.25, 0.25);
+		glScalef(0.30, 0.30, 0.30);
+		//glScalef(0.25, 0.25, 0.25);
 		draw_model("enemy");
 	}
 	glPopMatrix();
@@ -2098,9 +2653,9 @@ void GameWorld::draw_ammo(bool shot_fired, int ammo_number, float angle) {
 	
 	if(!island_hit) {
 		if(ammo_mode == 1 && shot_fired == true && current_missile_numbers > 0) {	
-			translation_x -= (float)sin(angle*radian_conversion) * 1.0f;
+			translation_x -= (float)sin(angle*radian_conversion) * 1.5f;
 			translation_y += 0.02f;
-			translation_z -= (float)cos(angle*radian_conversion) * 1.0f;
+			translation_z -= (float)cos(angle*radian_conversion) * 1.5f;
 			scaling_factor += 0.2;
 		
 			if(ammo_number % 2 == 0) {
@@ -2585,4 +3140,82 @@ void GameWorld::draw_sniper_hud() {
 
 	glDisable(GL_BLEND);
 	glEnable(GL_LIGHTING);
+}
+
+void GameWorld::draw_current_ammo() {
+	if(current_ammo_indicator_list == 0) {
+		current_ammo_indicator_list = glGenLists(1);
+		glNewList(current_ammo_indicator_list, GL_COMPILE);
+			glDisable(GL_LIGHTING);
+			glColor3f(1.0, 0.0, 0.0);
+			glBegin(GL_QUADS);	
+				glVertex3f(0.0, 0.05, 0.0);
+				glVertex3f(0.0, 0.0, 0.0);
+				glVertex3f(0.15, 0.0, 0.0);
+				glVertex3f(0.15, 0.05, 0.0);
+			glEnd();
+			glEnable(GL_LIGHTING);
+		glEndList();
+	} else {
+		glCallList(current_ammo_indicator_list);
+	}
+}
+
+void  GLFWCALL emptyCallBack( int key, int action ){
+
+}
+
+void  GLFWCALL getInputs( int key, int action ){
+	static int letterCount = 0;
+
+	if( action != GLFW_PRESS ) {
+        return;
+    }
+
+	if(letterCount < 8) {
+		//	glfwSetKeyCallback( keyInputs.getInputs );
+		switch( key ){
+			case GLFW_KEY_ESC: break;
+			case 'A':keysPressed+='A';letterCount++;break;
+			case 'B':keysPressed+='B';letterCount++;break;
+			case 'C':keysPressed+='C';letterCount++;break;
+			case 'D':keysPressed+='D';letterCount++;break;
+			case 'E':keysPressed+='E';letterCount++;break;
+			case 'F':keysPressed+='F';letterCount++;break;
+			case 'G':keysPressed+='G';letterCount++;break;
+			case 'H':keysPressed+='H';letterCount++;break;
+			case 'I':keysPressed+='I';letterCount++;break;
+			case 'J':keysPressed+='J';letterCount++;break;
+			case 'K':keysPressed+='K';letterCount++;break;
+			case 'L':keysPressed+='L';letterCount++;break;
+			case 'M':keysPressed+='M';letterCount++;break;
+			case 'N':keysPressed+='N';letterCount++;break;
+			case 'O':keysPressed+='O';letterCount++;break;
+			case 'P':keysPressed+='P';letterCount++;break;
+			case 'Q':keysPressed+='Q';letterCount++;break;
+			case 'R':keysPressed+='R';letterCount++;break;
+			case 'S':keysPressed+='S';letterCount++;break;
+			case 'T':keysPressed+='T';letterCount++;break;
+			case 'U':keysPressed+='U';letterCount++;break;
+			case 'V':keysPressed+='V';letterCount++;break;
+			case 'W':keysPressed+='W';letterCount++;break;
+			case 'X':keysPressed+='X';letterCount++;break;
+			case 'Y':keysPressed+='Y';letterCount++;break;
+			case 'Z':keysPressed+='Z';letterCount++;break;
+			case GLFW_KEY_DEL:
+			case GLFW_KEY_BACKSPACE:
+				if(keysPressed.size()>0) {
+					keysPressed.erase(keysPressed.size()-1);
+					letterCount--;
+				}
+			break;
+		}
+	 } else{
+		switch(key) {
+			case GLFW_KEY_BACKSPACE:
+			case GLFW_KEY_DEL:
+				keysPressed.erase(keysPressed.size()-1);
+				letterCount--;
+		}
+	}
 }

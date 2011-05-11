@@ -32,3 +32,15 @@ sniper-target.tga
 sniper.tga
 explosions.tga
 trail_smoke.tga
+menu.tga
+new_game_button.tga
+game_controls_button.tga
+high_scores_button.tga
+quit_button.tga
+back_button.tga
+high-score-list.tga
+controls.tga
+begin_button.tga
+instructions.tga
+button.tga
+exit-box.tga

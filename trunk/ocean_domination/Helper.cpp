@@ -22,7 +22,7 @@ GLfloat random_number_generator(int low_bound, int high_bound, float seed) {
 	double time = glfwGetTime();
 
 	if(seed == 0)
-		seed = time;
+		seed = (time - (int)time) * 20;
 
 	srand(seed);
 	random_number = (float)((rand() % (high_bound - low_bound + 1)) + low_bound);
