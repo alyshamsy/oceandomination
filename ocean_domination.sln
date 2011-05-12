@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ocean_domination", "ocean_domination\ocean_domination.vcxproj", "{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Ocean Domination", "Ocean Domination\Ocean Domination.vdproj", "{A9C31496-BF00-479F-93EB-ECE33390AD95}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +15,8 @@ Global
 		{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}.Debug|Win32.Build.0 = Debug|Win32
 		{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}.Release|Win32.ActiveCfg = Release|Win32
 		{19F87F3C-39AB-4E28-92F9-63618BAEB3F9}.Release|Win32.Build.0 = Release|Win32
+		{A9C31496-BF00-479F-93EB-ECE33390AD95}.Debug|Win32.ActiveCfg = Debug
+		{A9C31496-BF00-479F-93EB-ECE33390AD95}.Release|Win32.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

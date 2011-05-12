@@ -125,6 +125,9 @@ GameWorld::GameWorld():font("bin/fonts/CAMBRIA.ttf") {
 
 	exit = 1;
 	start_game = false;
+
+	alutInit(0, 0);
+	game_sound.initialize();
 }
 
 GameWorld::~GameWorld() {
@@ -275,7 +278,7 @@ int GameWorld::CreateGameWorld() {
 	setFontSize(24);
 
 	//randomize lighting at the beginning
-	GLfloat initial_light_value = random_number_generator(0, 5, 0);
+	/*GLfloat initial_light_value = random_number_generator(0, 5, 0);
 	initial_light_value = initial_light_value/10.0 + 0.5;
 
 	ambient_light[0] = initial_light_value;
@@ -288,7 +291,7 @@ int GameWorld::CreateGameWorld() {
 
 	specular_light[0] = initial_light_value;
 	specular_light[1] = initial_light_value;
-	specular_light[2] = initial_light_value;
+	specular_light[2] = initial_light_value;*/
 
 	//set the start time
 	level_start_time = start_time = glfwGetTime();
@@ -304,6 +307,16 @@ int GameWorld::CreateGameWorld() {
 
 	load_high_scores();
 
+	play_canon_sound = true;
+	play_explosion_sound = true;
+	play_storm_sound = true;
+
+	game_paused = false;
+
+	game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+	//game_sound.increaseSoundVolume("waves.wav", 0.25);
+	game_sound.playSound("waves.wav");
+
 	return 0;
 }
 
@@ -314,7 +327,7 @@ int GameWorld::UpdateGameWorld() {
 	}
 
 	if(glfwGetKey( GLFW_KEY_ESC )) {
-		pause_game();
+		game_paused = true;
 	}
 
 	Vector next_ship_location = current_ship_location;
@@ -409,6 +422,10 @@ int GameWorld::UpdateGameWorld() {
 				ammo_number--;
 				player_ship.player_ammo.missiles = ammo_number;
 				create_trail_particles();
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*current_ammo_location.x, current_ammo_location.y, current_ammo_location.z*/);
+				game_sound.increaseSoundVolume("missile.wav", 10.0);
+				game_sound.playSound("missile.wav");
 			}
 		} else if(ammo_mode == 2) {
 			sniper_start_time = glfwGetTime();
@@ -416,6 +433,10 @@ int GameWorld::UpdateGameWorld() {
 			if(ammo_number > 0) {
 				ammo_number--;
 				player_ship.player_ammo.sniper_bullets = ammo_number;
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*current_ammo_location.x, current_ammo_location.y, current_ammo_location.z*/);
+				game_sound.increaseSoundVolume("sniper_bullet.wav", 100.0);
+				game_sound.playSound("sniper_bullet.wav");
 			}
 		} else if(ammo_mode == 3) {
 			ammo_number = player_ship.player_ammo.super_missiles;
@@ -424,6 +445,9 @@ int GameWorld::UpdateGameWorld() {
 				player_ship.player_ammo.super_missiles = ammo_number;
 				create_missile_particles();
 				create_trail_particles();
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*current_ammo_location.x, current_ammo_location.y, current_ammo_location.z*/);
+				game_sound.playSound("super_missile.wav");
 			}
 		}
 	}
@@ -598,6 +622,7 @@ int GameWorld::UpdateGameWorld() {
 	update_trail_particles();
 	
 	if(player_ship.getHealth() == 0 || level_time == 0 || islands.size() == 0) {
+		game_sound.stopAllSounds();
 		exit = display_end_of_game_screen();
 	} 
 
@@ -1398,11 +1423,16 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} else {
 				health -= 10;
 				explosion_location = islands.at(island_number).getLocation();
 				damage = true;
 				islands.at(island_number).UpdateHealth(health);
+				explosion = false;
 			}
 		} else if(ammo_mode == 2) {
 			if(health <= 10) {
@@ -1420,11 +1450,16 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} else {
 				health -= 10;
 				explosion_location = islands.at(island_number).getLocation();
 				damage = true;
 				islands.at(island_number).UpdateHealth(health);
+				explosion = false;
 			}
 		} else {
 			if(health <= 50) {
@@ -1442,11 +1477,16 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} else {
 				health -= 50;
 				explosion_location = islands.at(island_number).getLocation();
 				damage = true;
 				islands.at(island_number).UpdateHealth(health);
+				explosion = false;
 			}
 		}
 	} else {
@@ -1466,11 +1506,16 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} else {
 				health -= 20;
 				explosion_location = islands.at(island_number).getLocation();
 				damage = true;
 				islands.at(island_number).UpdateHealth(health);
+				explosion = false;
 			}
 		} else if(ammo_mode == 2) {
 			if(health <= 15) {
@@ -1488,11 +1533,16 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} else {
 				health -= 15;
 				explosion_location = islands.at(island_number).getLocation();
 				damage = true;
 				islands.at(island_number).UpdateHealth(health);
+				explosion = false;
 			}
 		} else {
 			if(health <= 100) {
@@ -1510,6 +1560,10 @@ void GameWorld::reduce_island_health(int& island_number){
 				glPopMatrix();
 				update_score(island_number);
 				islands.erase(islands.begin()+island_number);
+
+				game_sound.setSoundSourcePosition(0.0, 0.0, 0.0/*player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z*/);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
 			} /*else {
 				health -= 100;
 				explosion_location = islands.at(island_number).getLocation();
@@ -1981,7 +2035,7 @@ int GameWorld::display_end_of_game_screen() {
 		return_button = getTextureValue(return_button_image);
 
 		int timer_score = level_time * 5;
-		string timer_score_value = intToString(timer_score);
+		string timer_score_value = "5 * " + intToString(level_time) + " = " + intToString(timer_score);
 
 		int total_score = final_score + timer_score;
 		string total_score_value = intToString(total_score);
@@ -2061,9 +2115,9 @@ int GameWorld::display_end_of_game_screen() {
 		if(total_score > scores[MAX_HIGH_SCORES - 1]) {
 			setFontSize(24);
 
-			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
-			//game_sound.increaseSoundVolume("tada.wav", 2.0);
-			//game_sound.playSound("tada.wav");
+			game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			game_sound.increaseSoundVolume("tada.wav", 2.0);
+			game_sound.playSound("tada.wav");
 
 			bool name_entered = false;
 			int high_score_name_box;
@@ -2125,8 +2179,6 @@ int GameWorld::display_end_of_game_screen() {
 }
 
 void GameWorld::pause_game() {
-	bool game_paused = true;
-
 	int select_exit_value = 0;
 	int exit_box;
 	int button;
@@ -2144,7 +2196,7 @@ void GameWorld::pause_game() {
 	exit_box = getTextureValue(exit_box_image);
 	button = getTextureValue(button_image);
 
-	//game_sound.pauseAllSounds();
+	game_sound.pauseAllSounds();
 
 	while(game_paused) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2213,20 +2265,22 @@ void GameWorld::pause_game() {
 		glfwSwapBuffers();
 
 		if(glfwGetKey( GLFW_KEY_RIGHT ) && glfwGetTime() - selection_time >= 0.25) {
-			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
-			//game_sound.playSound("menu-change.wav");
+			game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			game_sound.playSound("menu-change.wav");
 			select_exit_value = 0;
 			selection_time = glfwGetTime();
 		} else if(glfwGetKey( GLFW_KEY_LEFT ) && glfwGetTime() - selection_time >= 0.25) {
-			//game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
-			//game_sound.playSound("menu-change.wav");
+			game_sound.setSoundSourcePosition(0.0, 0.0, 0.0);
+			game_sound.playSound("menu-change.wav");
 			select_exit_value = 1;
 			selection_time = glfwGetTime();
 		}
 
 		if(glfwGetKey( GLFW_KEY_ENTER ) && select_exit_value == 1) {
 			game_paused = false;
-			//game_sound.stopAllSounds();
+			game_sound.stopAllSounds();
+
+			ammo_mode = 1;
 			exit = 0;
 		} else if(glfwGetKey( GLFW_KEY_ENTER ) && select_exit_value == 0) {
 			game_paused = false;
@@ -2236,8 +2290,8 @@ void GameWorld::pause_game() {
 
 			glfwSetTime(pause_time);
 
-			//game_sound.stopSound("menu-change.wav");
-			//game_sound.playAllSounds();
+			game_sound.stopSound("menu-change.wav");
+			game_sound.playAllSounds();
 		}
 
 		if(!glfwGetWindowParam( GLFW_OPENED )) {
@@ -2281,7 +2335,7 @@ void GameWorld::setup_camera() {
 	gluPerspective(75.0, aspect_ratio, 1.0, 10000.0);
 
 	glMatrixMode(GL_MODELVIEW);
-	if(ammo_mode != 2) {
+	if(ammo_mode != 2 || game_paused == true) {
 		glLoadIdentity();
 		glTranslatef(0.0, 0.0, -10.0);
 		glRotatef(17, 1.0, 0.0, 0.0);
@@ -2289,6 +2343,10 @@ void GameWorld::setup_camera() {
 		glLoadIdentity();
 		glTranslatef(0.0, -2.5, -3.5);
 		glRotatef(-17, 1.0, 0.0, 0.0);
+	}
+
+	if(game_paused == true) {
+		pause_game();
 	}
 
 	draw_world();
@@ -2525,6 +2583,17 @@ void GameWorld::draw_top_world() {
 				draw_model("grey_sky");
 				glColor3f(1.0, 1.0, 1.0);
 			glDisable(GL_BLEND);
+
+			if(play_storm_sound == true) {
+				game_sound.setSoundSourcePosition(0.0, 6.0, 0.0);
+				game_sound.playSound("storm.wav");
+
+				play_storm_sound = false;
+			}
+		} else {
+			if(play_storm_sound == false) {
+				play_storm_sound = true;
+			}
 		}
 	}
 	glPopMatrix();
@@ -2568,6 +2637,18 @@ void GameWorld::draw_bottom_world() {
 				draw_explosion();
 			}
 			glPopMatrix();
+
+			/*if(play_explosion_sound == true) {
+				play_explosion_sound = false;
+
+				game_sound.setSoundSourcePosition(player_ship.getLocation().x, player_ship.getLocation().y, player_ship.getLocation().z);
+				game_sound.increaseSoundVolume("explosion.wav", 10.0);
+				game_sound.playSound("explosion.wav");
+			}
+		} else 
+		
+		if(play_explosion_sound == false && glfwGetTime() - explosion_time >= 3.0) {
+			play_explosion_sound = true;*/
 		}
 
 		draw_island_health(0.5);
@@ -2951,8 +3032,18 @@ void GameWorld::draw_island_ammo() {
 					draw_model("canon");
 				}
 				glPopMatrix();
+
+				if(play_canon_sound == true) {
+					game_sound.setSoundSourcePosition(current_island_ammo_location.x, current_island_ammo_location.y, current_island_ammo_location.z);
+					game_sound.increaseSoundVolume("canon.wav", 10.0);
+					game_sound.playSound("canon.wav");
+
+					play_canon_sound = false;
+				}
 			}
 		}
+	} else {
+		play_canon_sound = true;
 	}
 	
 }

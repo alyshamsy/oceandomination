@@ -8,7 +8,7 @@
 
 using namespace std;
 
-#define NUMBER_OF_SOURCES 5
+#define NUMBER_OF_SOURCES 10
 
 static class Sound {
 public:
