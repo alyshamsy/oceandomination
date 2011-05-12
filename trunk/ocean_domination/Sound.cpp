@@ -50,14 +50,20 @@ int Sound::initialize() {
 		alSourcef(source[i], AL_PITCH, 1.0f);
 		alSourcef(source[i], AL_GAIN, 1.0f);
 		alSourcei(source[i], AL_BUFFER, buffer[i]);
-		alSourcei(source[i], AL_LOOPING, AL_FALSE);
+		
+		if(fileNames[i].compare("bin/sounds/menu.wav") == 0 || fileNames[i].compare("bin/sounds/waves.wav") == 0) {
+			alSourcei(source[i], AL_LOOPING, AL_TRUE);
+		} else {
+			alSourcei(source[i], AL_LOOPING, AL_FALSE);
+		}
+		
 	}
 
 	return 0;
 }
 
 int Sound::loadSounds() {
-	char al_bool;
+	char al_bool = 0;
 	char* file_name;
 
 	string sound_file_name, sound_location = "bin/sounds/", sounds_file_name = "bin/sounds/sounds.txt";
@@ -83,7 +89,7 @@ int Sound::loadSounds() {
 	for(int i = 0; i < NUMBER_OF_SOURCES; i++) {
 		file_name = new char[fileNames[i].length() + 1];
 		strcpy(file_name, fileNames[i].c_str());
-
+		
 		alutLoadWAVFile(file_name, &format, &data, &size, &freq, &al_bool);
 		alBufferData(buffer[i], format, data, size, freq);
 		alutUnloadWAV(format, data, size, freq);

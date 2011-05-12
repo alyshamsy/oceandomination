@@ -1,3 +1,10 @@
-# Displays all the sounds to be used by the game
 menu-change.wav
 tada.wav
+waves.wav
+canon.wav
+explosion.wav
+menu.wav
+missile.wav
+sniper_bullet.wav
+storm.wav
+super_missile.wav

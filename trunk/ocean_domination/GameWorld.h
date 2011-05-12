@@ -8,6 +8,7 @@
 #include "Helper.h"
 #include "Island.h"
 #include "Ship.h"
+#include "Sound.h"
 
 #include <stdlib.h>
 #include <fstream>
@@ -22,7 +23,7 @@
 #define radian_conversion 0.0174532925f
 #define degree_conversion 57.2957795785523f
 #define light_size 4
-#define INITIAL_TIME 180
+#define INITIAL_TIME 240
 #define MAX_HIGH_SCORES 10
 
 using namespace std;
@@ -211,6 +212,14 @@ private:
 
 	//Initialize Text displayer
 	FTGLPixmapFont font;
+
+	//sound variable
+	Sound game_sound;
+	bool play_canon_sound;
+	bool play_explosion_sound;
+	bool play_storm_sound;
+
+	bool game_paused;
 
 	//initialization functionality
 	//int generate_model_display_list(ModelLoader& model, GLuint model_call_list);

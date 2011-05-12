@@ -127,11 +127,14 @@ void init() {
 
 	glfwSwapBuffers();
 
+	alutInit(0, 0);
+
 #ifdef THREAD_LOADING
 	init_thread.join();
 #endif
 
 	current_game.InitializeGameWorld();
+	game_sounds.initialize();
 }
 
 //exits the game
@@ -511,7 +514,7 @@ int main() {
 	int game_end = 0;
 	int select_exit_value = 0;
 	bool create_world = false;
-	bool menu_sound = false;
+
 	//initialize the openGL window
 	//_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG)|_CRTDBG_LEAK_CHECK_DF);
 	
@@ -521,17 +524,13 @@ int main() {
 
 	// Main loop
 	while (running != 4) {
-		if(menu_sound == false) {
-			game_sounds.playSound("initial-sound.wav");
-			menu_sound = true;
-		}
+		game_sounds.playSound("menu.wav");
 
 		running = menu();
 		select_exit_value = 0;
 
 		while( running == 1 ) {
-			game_sounds.stopSound("initial-sound.wav");
-			menu_sound = false;
+			game_sounds.stopSound("menu.wav");
 
 			if(create_world == false) {
 				//create a function to setup the world
@@ -560,12 +559,12 @@ int main() {
 		create_world = false;
 
 		if(running == 2) {
-			game_sounds.stopSound("initial-sound.wav");
+			game_sounds.stopSound("menu.wav");
 			running = game_controls();
 		}
 
 		if(running == 3) {
-			game_sounds.stopSound("initial-sound.wav");
+			game_sounds.stopSound("menu.wav");
 			running = high_scores();
 		}
 	}
